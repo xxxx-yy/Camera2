@@ -4,7 +4,7 @@
     android:layout_height="match_parent">
 
     <TextureView
-        android:id="@+id/textureView"
+        android:id="@+id/mTextureView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center" />
@@ -75,7 +75,7 @@
             android:padding="5dp">
 
             <ImageView
-                android:id="@+id/imageView"
+                android:id="@+id/mImageView"
                 android:layout_width="30dp"
                 android:layout_height="40dp" />
 
@@ -90,7 +90,7 @@
                 android:background="@drawable/bg" />
 
             <ImageButton
-                android:id="@+id/change"
+                android:id="@+id/mChange"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:src="@drawable/change"

@@ -1,6 +1,8 @@
 package com.example.camera2;
 
 import android.Manifest;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -98,9 +100,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
         initView(view);
 
-        mCameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
-        textureView.setSurfaceTextureListener(textureListener);
-
         recording.setOnClickListener(this);
         mImageView.setOnClickListener(this);
         change.setOnClickListener(this);
@@ -117,6 +116,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             setLastImagePath();
             initChildHandler();
             if (textureView.isAvailable()) {
+                setUpCamera();
                 openCamera();
             } else {
                 textureView.setSurfaceTextureListener(textureListener);
@@ -140,7 +140,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             } else {
                 textureView.setSurfaceTextureListener(textureListener);
             }
-        } else {
         }
     }
 
@@ -166,10 +165,10 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                     startRecorder();
                 }
                 break;
-            case R.id.imageView:
+            case R.id.mImageView:
                 openAlbum();
                 break;
-            case R.id.change:
+            case R.id.mChange:
                 changeCamera();
                 break;
         }
@@ -178,10 +177,10 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private void initView(View view) {
         Log.d(TAG, "initView: success");
 
-        textureView = view.findViewById(R.id.textureView);
+        textureView = view.findViewById(R.id.mTextureView);
         recording = view.findViewById(R.id.recordingBtn);
-        mImageView = view.findViewById(R.id.imageView);
-        change = view.findViewById(R.id.change);
+        mImageView = view.findViewById(R.id.mImageView);
+        change = view.findViewById(R.id.mChange);
         timer = view.findViewById(R.id.timer);
         timerBg = view.findViewById(R.id.timerBg);
     }
@@ -197,23 +196,25 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
         @Override
         public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
-
+            Log.d(TAG, "onSurfaceTextureSizeChanged: success");
         }
 
         @Override
         public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
+            Log.d(TAG, "onSurfaceTextureDestroyed: success");
             return false;
         }
 
         @Override
         public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
-
+            Log.d(TAG, "onSurfaceTextureUpdated: success");
         }
     };
 
     private void setUpCamera() {
         Log.d(TAG, "setupCamera: success");
 
+        mCameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         try {
             for (String cameraId : mCameraManager.getCameraIdList()) {
                 CameraCharacteristics characteristics = mCameraManager.getCameraCharacteristics(cameraId);
@@ -512,11 +513,23 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     };
 
     private void startRecorder() {
+        ObjectAnimator scaleXAnim = ObjectAnimator.ofFloat(recording, "scaleX", 1f, 0.8f, 1f);
+        ObjectAnimator scaleYAnim = ObjectAnimator.ofFloat(recording, "scaleY", 1f, 0.8f, 1f);
+        AnimatorSet set = new AnimatorSet();
+        set.play(scaleXAnim).with(scaleYAnim);
+        set.setDuration(300);
+        set.start();
         mMediaRecorder.start();
         startTime();
     }
 
     private void stopRecorder() {
+        ObjectAnimator scaleXAnim = ObjectAnimator.ofFloat(recording, "scaleX", 1f, 0.8f, 1f);
+        ObjectAnimator scaleYAnim = ObjectAnimator.ofFloat(recording, "scaleY", 1f, 0.8f, 1f);
+        AnimatorSet set = new AnimatorSet();
+        set.play(scaleXAnim).with(scaleYAnim);
+        set.setDuration(300);
+        set.start();
         if (mMediaRecorder != null) {
             mMediaRecorder.stop();
             mMediaRecorder.reset();
@@ -564,6 +577,9 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private void changeCamera() {
         Log.d(TAG, "changeCamera: success");
 
+        ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, 180f);
+        anim.setDuration(300);
+        anim.start();
         if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
             Log.d(TAG, "前置转后置");
             mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_FRONT);

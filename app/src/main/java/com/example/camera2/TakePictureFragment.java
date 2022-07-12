@@ -1,6 +1,9 @@
 package com.example.camera2;
 
 import android.Manifest;
+import android.animation.Animator;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -412,6 +415,12 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void takePhoto() {
         Log.d(TAG, "takePhoto: success");
 
+        ObjectAnimator scaleXAnim = ObjectAnimator.ofFloat(takePicture, "scaleX", 1f, 0.8f, 1f);
+        ObjectAnimator scaleYAnim = ObjectAnimator.ofFloat(takePicture, "scaleY", 1f, 0.8f, 1f);
+        AnimatorSet set = new AnimatorSet();
+        set.play(scaleXAnim).with(scaleYAnim);
+        set.setDuration(300);
+        set.start();
         try {
             final CaptureRequest.Builder mCaptureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             mCaptureBuilder.addTarget(mImageReader.getSurface());
@@ -465,6 +474,9 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void changeCamera() {
         Log.d(TAG, "changeCamera: success");
 
+        ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, 180f);
+        anim.setDuration(300);
+        anim.start();
         if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
             Log.d(TAG, "前置转后置");
             mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_FRONT);
