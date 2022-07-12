@@ -41,7 +41,7 @@ import android.widget.Chronometer;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Toast;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -59,6 +59,7 @@ import java.util.Date;
 
 public class RecorderVideoFragment extends Fragment implements View.OnClickListener {
     private static final String TAG = "RecorderVideoFragment";
+
     private TextureView textureView;
     private ImageButton recording;
     private ImageView mImageView;
@@ -121,6 +122,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 textureView.setSurfaceTextureListener(textureListener);
             }
         } else {
+            Log.d(TAG, TAG + " releaseCamera");
+            isVisible = false;
             closeCamera();
             return;
         }
@@ -130,13 +133,21 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     public void onResume() {
         super.onResume();
         if (isVisible) {
+            setLastImagePath();
             initChildHandler();
             if (textureView.isAvailable()) {
                 openCamera();
             } else {
                 textureView.setSurfaceTextureListener(textureListener);
             }
+        } else {
         }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        closeCamera();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -210,6 +221,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                     continue;
                 }
                 mCameraId = cameraId;
+                break;
             }
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -427,9 +439,9 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void configMediaRecorder() {
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
         Date date = new Date(System.currentTimeMillis());
-        File file = new File(Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera" + format.format(date) + ".mp4");
+        File file = new File(Environment.getExternalStorageDirectory().toString() + "/DCIM/camera/myVideo" + format.format(date) + ".mp4");
         if (file.exists()) {
             file.delete();
         }
@@ -441,17 +453,17 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        mMediaRecorder.setAudioEncodingBitRate(8 * 1024 * 1920);
-        mMediaRecorder.setVideoFrameRate(30);
         Size size = getMatchingSize();
         mMediaRecorder.setVideoSize(size.getWidth(), size.getHeight());
+        mMediaRecorder.setVideoFrameRate(30);
+        mMediaRecorder.setOutputFile(file.getAbsoluteFile());
+        mMediaRecorder.setVideoEncodingBitRate(8 * 1024 * 1920);
         mMediaRecorder.setOrientationHint(90);
         if (mCameraId.equals("1")) {
             mMediaRecorder.setOrientationHint(270);
         }
         Surface surface = new Surface(textureView.getSurfaceTexture());
         mMediaRecorder.setPreviewDisplay(surface);
-        mMediaRecorder.setOutputFile(file.getAbsoluteFile());
         try {
             mMediaRecorder.prepare();
         } catch (IOException e) {

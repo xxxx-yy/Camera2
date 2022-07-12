@@ -10,8 +10,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 
-import com.google.android.material.tabs.TabLayout;
-
 import java.util.ArrayList;
 import java.util.List;
 

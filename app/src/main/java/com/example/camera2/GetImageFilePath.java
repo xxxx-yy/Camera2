@@ -12,17 +12,17 @@ public class GetImageFilePath {
     public static ArrayList<String> getFilePath() {
         File file = new File(Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera");
         File[] dirEpub = file.listFiles();
-        if (dirEpub.length != 0) {
-            for (int i = 0; i < dirEpub.length; ++i) {
-                String fileName = dirEpub[i].toString();
-                String tmp = Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera";
-                if (fileName.charAt(tmp.length() + 1) == '.') {
-                    continue;
-                }
-                imageList.add(fileName);
-                Log.i("File", "File name = " + fileName);
+        imageList.clear();
+        for (int i = 0; i < dirEpub.length; ++i) {
+            String fileName = dirEpub[i].toString();
+            String tmp = Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera";
+            if (fileName.charAt(tmp.length() + 1) == '.') {
+                continue;
             }
+            imageList.add(fileName);
+            Log.i("File", "File name = " + fileName);
         }
+
         return imageList;
     }
 }

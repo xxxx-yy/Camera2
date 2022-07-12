@@ -39,32 +39,64 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:background="#66666666"
         android:padding="10dp"
-        android:layout_gravity="bottom"
-        android:gravity="center">
+        android:layout_gravity="bottom">
 
-        <ImageView
-            android:id="@+id/imageView"
-            android:layout_width="30dp"
-            android:layout_height="40dp" />
-
-        <ImageButton
-            android:id="@+id/recordingBtn"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginLeft="50dp"
-            android:layout_marginRight="50dp"
-            android:src="@drawable/recording"
-            android:background="@drawable/bg" />
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:padding="5dp">
+            <TextView
+                android:id="@+id/photoMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="50dp"
+                android:text="拍照"
+                android:textColor="@color/white"
+                android:textSize="15sp" />
+            <TextView
+                android:id="@+id/recordingMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="视频"
+                android:textColor="#ffff8811"
+                android:textSize="17sp" />
+        </LinearLayout>
 
-        <ImageButton
-            android:id="@+id/change"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:src="@drawable/change"
-            android:background="@drawable/bg" />
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:padding="5dp">
+
+            <ImageView
+                android:id="@+id/imageView"
+                android:layout_width="30dp"
+                android:layout_height="40dp" />
+
+            <ImageButton
+                android:id="@+id/recordingBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginLeft="50dp"
+                android:layout_marginRight="50dp"
+                android:src="@drawable/recording"
+                android:background="@drawable/bg" />
+
+            <ImageButton
+                android:id="@+id/change"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/change"
+                android:background="@drawable/bg" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

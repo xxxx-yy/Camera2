@@ -6,10 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.ImageFormat;
-import android.graphics.Matrix;
-import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -19,7 +16,6 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
-import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
@@ -41,9 +37,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.TextView;
 
-import androidx.annotation.ColorRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -54,10 +48,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 
 public class TakePictureFragment extends Fragment implements View.OnClickListener {
@@ -71,8 +67,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
-    private TextView photoMode;
-    private TextView recordingMode;
+    private View view;
     private TextureView textureView;
     private ImageButton takePicture;
     private ImageButton change;
@@ -84,6 +79,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             Manifest.permission.RECORD_AUDIO };
     private List<String> permissionList = new ArrayList();
     private boolean isVisible;
+    private CameraManager mManager;
     private Size mPreviewSize;
     private String mCameraId;
     private Surface mPreviewSurface;
@@ -100,10 +96,11 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         super.onCreateView(inflater, container, savedInstanceState);
         Log.d(TAG, "onCreateView: success");
 
-        View view = inflater.inflate(R.layout.fragment_take_picture, container, false);
+        view = inflater.inflate(R.layout.fragment_take_picture, container, false);
 
         initView(view);
 
+        mManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         textureView.setSurfaceTextureListener(textureListener);
 
         takePicture.setOnClickListener(this);
@@ -120,8 +117,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void initView(View view) {
         Log.d(TAG, "initView: success");
 
-        photoMode = view.findViewById(R.id.photoMode);
-        recordingMode = view.findViewById(R.id.recordingMode);
         textureView = view.findViewById(R.id.textureView);
         takePicture = view.findViewById(R.id.takePhotoBtn);
         mImageView = view.findViewById(R.id.imageView);
@@ -207,45 +202,63 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             Log.d(TAG, TAG + " releaseCamera");
             isVisible = false;
             closeCamera();
+            return;
         }
     }
 
     @Override
     public void onResume() {
+        Log.d(TAG, "onResume: success");
         super.onResume();
         if (isVisible) {
             setLastImagePath();
-            photoMode.setTextSize(15);
-            photoMode.setTextColor(0xffffffff);
-            recordingMode.setTextSize(17);
-            recordingMode.setTextColor(0xffff8811);
             if (textureView.isAvailable()) {
                 openCamera();
             } else {
                 textureView.setSurfaceTextureListener(textureListener);
             }
-        } else {
-            recordingMode.setTextSize(15);
-            recordingMode.setTextColor(0xffffffff);
-            photoMode.setTextSize(17);
-            photoMode.setTextColor(0xffff8811);
         }
     }
 
     @Override
     public void onPause() {
+        Log.d(TAG, "onPause: success");
         super.onPause();
         closeCamera();
     }
+
+    //TextureView回调
+    private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
+        @Override
+        public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
+            Log.d(TAG, "onSurfaceTextureAvailable: success");
+
+            setupCamera();
+            openCamera();
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
+
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
+            return false;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
+        }
+    };
 
     //配置相机
     private void setupCamera() {
         Log.d(TAG, "setupCamera: success");
 
-        CameraManager manager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         try {
-            for (String cameraId: manager.getCameraIdList()) {
-                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
+            for (String cameraId: mManager.getCameraIdList()) {
+                CameraCharacteristics characteristics = mManager.getCameraCharacteristics(cameraId);
                 if (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
                     continue;
                 }
@@ -287,41 +300,15 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         return sizeMap[0];
     }
 
-    //TextureView回调
-    private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
-        @Override
-        public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
-            Log.d(TAG, "onSurfaceTextureAvailable: success");
-
-            setupCamera();
-            openCamera();
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
-
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
-            return false;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
-        }
-    };
-
     //打开相机
     private void openCamera() {
         Log.d(TAG, "openCamera: success");
 
-        CameraManager manager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         try {
             if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 return;
             } else {
-                manager.openCamera(mCameraId, stateCallback, null);
+                mManager.openCamera(mCameraId, stateCallback, null);
             }
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -340,13 +327,11 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         @Override
         public void onDisconnected(@NonNull CameraDevice camera) {
             Log.d(TAG, "CameraDevice.StateCallback： onDisconnected");
-            closeCamera();
         }
 
         @Override
         public void onError(@NonNull CameraDevice camera, int i) {
             Log.d(TAG, "CameraDevice.StateCallback： onError");
-            closeCamera();
         }
     };
 
@@ -359,7 +344,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         mSurfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         mPreviewSurface = new Surface(mSurfaceTexture);
         try {
-            setPreviewRequestBuilder();
+            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            mPreviewRequestBuilder.addTarget(mPreviewSurface);
             mCameraDevice.createCaptureSession(Arrays.asList(mPreviewSurface, mImageReader.getSurface()), sessionStateCallback, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -374,29 +360,11 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             public void onImageAvailable(ImageReader reader) {
                 Log.d(TAG, "图片已保存");
 
-                Image image = mImageReader.acquireNextImage();
+                Image image = reader.acquireNextImage();
                 ImageSaver imageSaver = new ImageSaver(getContext(), image);
                 new Thread(imageSaver).start();
             }
         }, null);
-    }
-
-    //创建预览请求Builder
-    private void setPreviewRequestBuilder() {
-        Log.d(TAG, "setPreviewRequestBuilder: success");
-
-        try {
-            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-        mPreviewRequestBuilder.addTarget(mPreviewSurface);
-        MeteringRectangle[] meteringRectangles = mPreviewRequestBuilder.get(CaptureRequest.CONTROL_AE_REGIONS);
-        if (meteringRectangles != null && meteringRectangles.length > 0) {
-            Log.d(TAG, "PreviewRequestBuilder: AF_REGIONS");
-        }
-        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_MODE_AUTO);
-        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
     }
 
     //CameraCaptureSession状态回调
@@ -536,10 +504,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
             byte[] bytes = new byte[buffer.remaining()];
             buffer.get(bytes);
-//            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//            Date date = new Date(System.currentTimeMillis());
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
+            Date date = new Date(System.currentTimeMillis());
             String path = Environment.getExternalStorageDirectory() + "/DCIM/camera/myPicture"
-                    + System.currentTimeMillis() + ".jpg";
+                    + format.format(date) + ".jpg";
             File imageFile = new File(path);
             FileOutputStream fos = null;
             try {
