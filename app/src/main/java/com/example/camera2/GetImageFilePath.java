@@ -11,6 +11,11 @@ public class GetImageFilePath {
 
     public static ArrayList<String> getFilePath() {
         File file = new File(Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera");
+        if (!file.exists()) {
+            file.mkdir();
+        } else if (file.exists() && !file.isDirectory()) {
+            Log.e("GetImageFilePath", "'Camera' already exists, but it isn't a directory.");
+        }
         File[] dirEpub = file.listFiles();
         imageList.clear();
         for (int i = 0; i < dirEpub.length; ++i) {

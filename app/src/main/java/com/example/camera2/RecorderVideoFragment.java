@@ -43,7 +43,6 @@ import android.widget.Chronometer;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -442,7 +441,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private void configMediaRecorder() {
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
         Date date = new Date(System.currentTimeMillis());
-        File file = new File(Environment.getExternalStorageDirectory().toString() + "/DCIM/camera/myVideo" + format.format(date) + ".mp4");
+        File file = new File(Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera/myVideo" + format.format(date) + ".mp4");
         if (file.exists()) {
             file.delete();
         }

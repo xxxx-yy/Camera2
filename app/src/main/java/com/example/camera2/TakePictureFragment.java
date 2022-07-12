@@ -1,7 +1,6 @@
 package com.example.camera2;
 
 import android.Manifest;
-import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
@@ -518,7 +517,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             buffer.get(bytes);
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
             Date date = new Date(System.currentTimeMillis());
-            String path = Environment.getExternalStorageDirectory() + "/DCIM/camera/myPicture"
+            String path = Environment.getExternalStorageDirectory() + "/DCIM/Camera/myPicture"
                     + format.format(date) + ".jpg";
             File imageFile = new File(path);
             FileOutputStream fos = null;
