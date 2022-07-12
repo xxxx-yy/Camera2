@@ -34,6 +34,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.TextureView;
@@ -43,6 +44,7 @@ import android.widget.Chronometer;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -67,6 +69,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private ImageButton change;
     private Chronometer timer;
     private LinearLayout timerBg;
+    private TextView photoMode;
+    private TextView recordingMode;
     private CaptureRequest.Builder mPreviewCaptureRequestBuilder;
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
@@ -83,7 +87,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private CameraCaptureSession mCameraCaptureSession;
     private HandlerThread mHandlerThread;
     private Handler mChildHandler;
-    private boolean isVisible = false;
     private boolean isRecording = false;
     private MediaRecorder mMediaRecorder;
     private CameraManager mCameraManager;
@@ -107,43 +110,24 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     }
 
     @Override
-    public void setUserVisibleHint(boolean isVisibleToUser) {
-        super.setUserVisibleHint(isVisibleToUser);
-        if (isVisibleToUser) {
-            isVisible = true;
-            Log.d(TAG, "setUserVisibleHint: true");
-            setLastImagePath();
-            initChildHandler();
-            if (textureView.isAvailable()) {
-                setUpCamera();
-                openCamera();
-            } else {
-                textureView.setSurfaceTextureListener(textureListener);
-            }
-        } else {
-            Log.d(TAG, TAG + " releaseCamera");
-            isVisible = false;
-            closeCamera();
-            return;
-        }
-    }
-
-    @Override
     public void onResume() {
+        Log.d(TAG, "onResume: success");
+
         super.onResume();
-        if (isVisible) {
-            setLastImagePath();
-            initChildHandler();
-            if (textureView.isAvailable()) {
-                openCamera();
-            } else {
-                textureView.setSurfaceTextureListener(textureListener);
-            }
+        setLastImagePath();
+        initChildHandler();
+        if (textureView.isAvailable()) {
+            setUpCamera();
+            openCamera();
+        } else {
+            textureView.setSurfaceTextureListener(textureListener);
         }
     }
 
     @Override
     public void onPause() {
+        Log.d(TAG, "onPause: success");
+
         super.onPause();
         closeCamera();
     }
@@ -182,6 +166,15 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         change = view.findViewById(R.id.mChange);
         timer = view.findViewById(R.id.timer);
         timerBg = view.findViewById(R.id.timerBg);
+
+        photoMode = view.findViewById(R.id.mPhotoMode);
+        recordingMode = view.findViewById(R.id.mRecordingMode);
+        photoMode.setOnClickListener(v -> {
+            ((MainActivity)getActivity()).changeToTakePicture();
+        });
+        recordingMode.setOnClickListener(v -> {
+            ((MainActivity)getActivity()).changeToRecord();
+        });
     }
 
     private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {

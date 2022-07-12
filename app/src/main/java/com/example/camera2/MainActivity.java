@@ -2,30 +2,31 @@ package com.example.camera2;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.Fragment;
-import androidx.viewpager.widget.ViewPager;
 
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private ViewPager viewPager;
-    private List<Fragment> layoutList;
-    private MyPagerAdapter myPagerAdapter;
+    private float x1 = 0;
+    private float x2 = 0;
+    private int currentView = 0;
+
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        initView();
-
+        TakePictureFragment fragment = new TakePictureFragment();
+        getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, fragment).commit();
+        currentView = 0;
+        
         if (Build.VERSION.SDK_INT >= 21) {
             View decorView = getWindow().getDecorView();
             int option = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -41,18 +42,44 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            x1 = event.getX();
+            Log.d("down", x1 + "");
+        }
+        if(event.getAction()==MotionEvent.ACTION_UP) {
+            x2 = event.getX();
+            Log.d("up", x2 + "");
+        }
+
+        if ((x1 - x2 > 100) && currentView == 0) {
+            changeToRecord();
+        } else if ((x2 - x1 > 100) && currentView == 1) {
+            changeToTakePicture();
+        }
+
+        return super.onTouchEvent(event);
+    }
+
+    public void changeToRecord() {
+        Log.d(TAG, "changeToRecord");
+
+        RecorderVideoFragment fragment = new RecorderVideoFragment();
+        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).commit();
+        currentView = 1;
+    }
+
+    public void changeToTakePicture() {
+        Log.d(TAG, "changeToTakePicture");
+
+        TakePictureFragment fragment = new TakePictureFragment();
+        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).commit();
+        currentView = 0;
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         TakePictureFragment.closeCamera();
-    }
-
-    private void initView() {
-        viewPager = findViewById(R.id.viewPager);
-        layoutList = new ArrayList<>();
-        layoutList.add(new TakePictureFragment());
-        layoutList.add(new RecorderVideoFragment());
-
-        myPagerAdapter = new MyPagerAdapter(getSupportFragmentManager(), layoutList);
-        viewPager.setAdapter(myPagerAdapter);
     }
 }

@@ -32,13 +32,17 @@ import android.os.Message;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -73,14 +77,14 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private TextureView textureView;
     private ImageButton takePicture;
     private ImageButton change;
+    private TextView photoMode;
+    private TextView recordingMode;
     private ImageView mImageView;
-    private boolean isCreated = false;
     private String[] permissions = { Manifest.permission.CAMERA,
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.RECORD_AUDIO };
     private List<String> permissionList = new ArrayList();
-    private boolean isVisible;
     private CameraManager mManager;
     private Size mPreviewSize;
     private String mCameraId;
@@ -111,8 +115,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         getPermission();
 
-        isCreated = true;
-
         return view;
     }
 
@@ -123,6 +125,15 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         takePicture = view.findViewById(R.id.takePhotoBtn);
         mImageView = view.findViewById(R.id.imageView);
         change = view.findViewById(R.id.change);
+
+        photoMode = view.findViewById(R.id.photoMode);
+        recordingMode = view.findViewById(R.id.recordingMode);
+        photoMode.setOnClickListener(v -> {
+            ((MainActivity)getActivity()).changeToTakePicture();
+        });
+        recordingMode.setOnClickListener(v -> {
+            ((MainActivity)getActivity()).changeToRecord();
+        });
     }
 
     @Override
@@ -185,46 +196,22 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     }
 
-    //判断Fragment是否可见
-    @Override
-    public void setUserVisibleHint(boolean isVisibleToUser) {
-        super.setUserVisibleHint(isVisibleToUser);
-        if (!isCreated) {
-            return;
-        }
-        if (isVisibleToUser) {
-            isVisible = true;
-            setLastImagePath();
-            if (textureView.isAvailable()) {
-                openCamera();
-            } else {
-                textureView.setSurfaceTextureListener(textureListener);
-            }
-        } else {
-            Log.d(TAG, TAG + " releaseCamera");
-            isVisible = false;
-            closeCamera();
-            return;
-        }
-    }
-
     @Override
     public void onResume() {
         Log.d(TAG, "onResume: success");
         super.onResume();
-        if (isVisible) {
-            setLastImagePath();
-            if (textureView.isAvailable()) {
-                openCamera();
-            } else {
-                textureView.setSurfaceTextureListener(textureListener);
-            }
+        setLastImagePath();
+        if (textureView.isAvailable()) {
+            openCamera();
+        } else {
+            textureView.setSurfaceTextureListener(textureListener);
         }
     }
 
     @Override
     public void onPause() {
         Log.d(TAG, "onPause: success");
+
         super.onPause();
         closeCamera();
     }
