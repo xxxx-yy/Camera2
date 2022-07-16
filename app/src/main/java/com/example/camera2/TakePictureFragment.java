@@ -8,8 +8,12 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
+import android.graphics.drawable.ColorDrawable;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -29,19 +33,19 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -57,8 +61,6 @@ import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -66,6 +68,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private static final String TAG = "TakePictureFragment";
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
+
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
         ORIENTATIONS.append(Surface.ROTATION_90, 0);
@@ -79,11 +82,22 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private ImageButton change;
     private TextView photoMode;
     private TextView recordingMode;
+    private TextView ratioSelected;
+    private PopupWindow ratio;
+    private TextView ratio1_1;
+    private TextView ratio4_3;
+    private TextView ratioFull;
+    private int width = 3;
+    private int height = 4;
+    private int deviceWidth;
+    private int deviceHeight;
+    private int previewWidth;
+    private int previewHeight;
     private ImageView mImageView;
-    private String[] permissions = { Manifest.permission.CAMERA,
+    private String[] permissions = {Manifest.permission.CAMERA,
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.RECORD_AUDIO };
+            Manifest.permission.RECORD_AUDIO};
     private List<String> permissionList = new ArrayList();
     private CameraManager mManager;
     private Size mPreviewSize;
@@ -100,7 +114,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
-        Log.d(TAG, "onCreateView: success");
+        Log.d(TAG, "onCreateView");
 
         view = inflater.inflate(R.layout.fragment_take_picture, container, false);
 
@@ -112,14 +126,40 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         takePicture.setOnClickListener(this);
         change.setOnClickListener(this);
         mImageView.setOnClickListener(this);
+        photoMode.setOnClickListener(this);
+        recordingMode.setOnClickListener(this);
+        ratio1_1.setOnClickListener(this);
+        ratio4_3.setOnClickListener(this);
+        ratioFull.setOnClickListener(this);
 
         getPermission();
 
         return view;
     }
 
+    @Override
+    public void onResume() {
+        Log.d(TAG, "onResume");
+
+        super.onResume();
+        CameraUtil.setLastImagePath(imageList, mImageView);
+        if (textureView.isAvailable()) {
+            openCamera();
+        } else {
+            textureView.setSurfaceTextureListener(textureListener);
+        }
+    }
+
+    @Override
+    public void onPause() {
+        Log.d(TAG, "onPause");
+
+        super.onPause();
+        closeCamera();
+    }
+
     private void initView(View view) {
-        Log.d(TAG, "initView: success");
+        Log.d(TAG, "initView");
 
         textureView = view.findViewById(R.id.textureView);
         takePicture = view.findViewById(R.id.takePhotoBtn);
@@ -128,17 +168,30 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         photoMode = view.findViewById(R.id.photoMode);
         recordingMode = view.findViewById(R.id.recordingMode);
-        photoMode.setOnClickListener(v -> {
-            ((MainActivity)getActivity()).changeToTakePicture();
+
+        ratioSelected = view.findViewById(R.id.ratio_selected);
+        ratio = new PopupWindow();
+        ratio.setWidth(ViewGroup.LayoutParams.WRAP_CONTENT);
+        ratio.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+        ratio.setFocusable(false);
+        ratio.setOutsideTouchable(true);
+        ratio.setBackgroundDrawable(new ColorDrawable(0x00000000));
+        ratio.setContentView(LayoutInflater.from(getActivity()).inflate(R.layout.select_ratio, null));
+        ratioSelected.setOnClickListener(v -> {
+            ratio.showAsDropDown(view.findViewById(R.id.selected), 215, 20);
         });
-        recordingMode.setOnClickListener(v -> {
-            ((MainActivity)getActivity()).changeToRecord();
-        });
+        ratio1_1 = ratio.getContentView().findViewById(R.id.ratio_1_1);
+        ratio4_3 = ratio.getContentView().findViewById(R.id.ratio_4_3);
+        ratioFull = ratio.getContentView().findViewById(R.id.ratio_full);
+
+        DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
+        deviceWidth = displayMetrics.widthPixels;
+        deviceHeight = displayMetrics.heightPixels;
     }
 
     @Override
     public void onClick(View view) {
-        Log.d(TAG, "onClick: success");
+        Log.d(TAG, "onClick");
 
         switch (view.getId()) {
             case R.id.takePhotoBtn:
@@ -150,15 +203,58 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             case R.id.imageView:
                 openAlbum();
                 break;
+            case R.id.photoMode:
+                ((MainActivity) getActivity()).changeToTakePicture();
+                break;
+            case R.id.recordingMode:
+                ((MainActivity) getActivity()).changeToRecord();
+                break;
+            case R.id.ratio_1_1:
+                ratioSelected.setText(ratio1_1.getText());
+                ratio1_1.setTextColor(ratioSelected.getTextColors());
+                ratio4_3.setTextColor(Color.WHITE);
+                ratioFull.setTextColor(Color.WHITE);
+                ratio.dismiss();
+                width = 1;
+                height = 1;
+                closeCamera();
+                setupCamera();
+                openCamera();
+                break;
+            case R.id.ratio_4_3:
+                ratioSelected.setText(ratio4_3.getText());
+                ratio4_3.setTextColor(ratioSelected.getTextColors());
+                ratio1_1.setTextColor(Color.WHITE);
+                ratioFull.setTextColor(Color.WHITE);
+                ratio.dismiss();
+                width = 3;
+                height = 4;
+                closeCamera();
+                setupCamera();
+                openCamera();
+                break;
+            case R.id.ratio_full:
+                ratioSelected.setText(ratioFull.getText());
+                ratioFull.setTextColor(ratioSelected.getTextColors());
+                ratio1_1.setTextColor(Color.WHITE);
+                ratio4_3.setTextColor(Color.WHITE);
+                ratio.dismiss();
+                width = deviceWidth;
+                height = deviceHeight;
+                Log.d(TAG, "device++++++++width: " + width + ", height: " + height);
+                closeCamera();
+                setupCamera();
+                openCamera();
+                break;
         }
     }
 
     //获取权限
     private void getPermission() {
-        Log.d(TAG, "getPermission: success");
+        Log.d(TAG, "getPermission");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            for (String permission: permissions) {
+            for (String permission : permissions) {
                 if (ContextCompat.checkSelfPermission(getContext(), permission) != PackageManager.PERMISSION_GRANTED) {
                     permissionList.add(permission);
                 }
@@ -167,7 +263,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 requestPermissions(permissionList.toArray(new String[permissionList.size()]), 1);
             } else {
                 textureView.setSurfaceTextureListener(textureListener);
-                setLastImagePath();
+                CameraUtil.setLastImagePath(imageList, mImageView);
             }
         }
     }
@@ -176,7 +272,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        Log.d(TAG, "onRequestPermissionResult: success");
+        Log.d(TAG, "onRequestPermissionResult");
 
         if (requestCode == 1 && grantResults.length > 0) {
             List<String> deniedPermissions = new ArrayList<>();
@@ -189,70 +285,55 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             }
             if (deniedPermissions.isEmpty()) {
                 openCamera();
-                setLastImagePath();
+                CameraUtil.setLastImagePath(imageList, mImageView);
             } else {
                 getPermission();
             }
         }
     }
 
-    @Override
-    public void onResume() {
-        Log.d(TAG, "onResume: success");
-        super.onResume();
-        setLastImagePath();
-        if (textureView.isAvailable()) {
-            openCamera();
-        } else {
-            textureView.setSurfaceTextureListener(textureListener);
-        }
-    }
-
-    @Override
-    public void onPause() {
-        Log.d(TAG, "onPause: success");
-
-        super.onPause();
-        closeCamera();
-    }
-
     //TextureView回调
     private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
-            Log.d(TAG, "onSurfaceTextureAvailable: success");
+            Log.d(TAG, "onSurfaceTextureAvailable");
 
+            previewWidth = width;
+            previewHeight = height;
             setupCamera();
             openCamera();
         }
 
         @Override
         public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
-
+            Log.d(TAG, "onSurfaceTextureSizeChanged");
         }
 
         @Override
         public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
+            Log.d(TAG, "onSurfaceTextureDestroyed");
             return false;
         }
 
         @Override
         public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
+            Log.d(TAG, "onSurfaceTextureUpdated");
         }
     };
 
     //配置相机
-    private void setupCamera() {
-        Log.d(TAG, "setupCamera: success");
+    public void setupCamera() {
+        Log.d(TAG, "setupCamera");
 
         try {
-            for (String cameraId: mManager.getCameraIdList()) {
+            for (String cameraId : mManager.getCameraIdList()) {
                 CameraCharacteristics characteristics = mManager.getCameraCharacteristics(cameraId);
                 if (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
                     continue;
                 }
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                mPreviewSize = getOptimalSize(map.getOutputSizes(SurfaceTexture.class), 720, 960);
+                mPreviewSize = GetPreviewSize.getOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
+//                textureView.setLayoutParams(new LinearLayout.LayoutParams(mPreviewSize.getHeight(), mPreviewSize.getWidth()));
                 textureView.setSurfaceTextureListener(textureListener);
                 mCameraId = cameraId;
                 break;
@@ -262,36 +343,9 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     }
 
-    //获取最佳预览尺寸
-    private Size getOptimalSize(Size[] sizeMap, int width, int height) {
-        Log.d(TAG, "getOptimalSize: success");
-
-        List<Size> sizeList = new ArrayList<>();
-        for (Size option: sizeMap) {
-            if (width > height) {
-                if (option.getWidth() > width && option.getHeight() > height) {
-                    sizeList.add(option);
-                }
-            } else {
-                if (option.getWidth() > height && option.getHeight() > width) {
-                    sizeList.add(option);
-                }
-            }
-        }
-        if (sizeList.size() > 0) {
-            return Collections.min(sizeList, new Comparator<Size>() {
-                @Override
-                public int compare(Size size, Size t1) {
-                    return Long.signum(size.getWidth() * size.getHeight() - t1.getWidth() * t1.getHeight());
-                }
-            });
-        }
-        return sizeMap[0];
-    }
-
     //打开相机
     private void openCamera() {
-        Log.d(TAG, "openCamera: success");
+        Log.d(TAG, "openCamera");
 
         try {
             if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -315,23 +369,28 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         @Override
         public void onDisconnected(@NonNull CameraDevice camera) {
-            Log.d(TAG, "CameraDevice.StateCallback： onDisconnected");
+            Log.e(TAG, "CameraDevice.StateCallback： onDisconnected");
         }
 
         @Override
         public void onError(@NonNull CameraDevice camera, int i) {
-            Log.d(TAG, "CameraDevice.StateCallback： onError");
+            Log.e(TAG, "CameraDevice.StateCallback： onError");
         }
     };
 
     //开启相机预览
     private void startPreview() {
-        Log.d(TAG, "startPreview: success");
+        Log.d(TAG, "startPreview");
 
         setupImageReader();
         SurfaceTexture mSurfaceTexture = textureView.getSurfaceTexture();
         mSurfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         mPreviewSurface = new Surface(mSurfaceTexture);
+        RectF previewRect = new RectF(0, 0, previewWidth, previewHeight);
+        RectF surfaceRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
+        Matrix matrix = new Matrix();
+        matrix.setRectToRect(previewRect, surfaceRect, Matrix.ScaleToFit.FILL);
+        textureView.setTransform(matrix);
         try {
             mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(mPreviewSurface);
@@ -360,19 +419,21 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private CameraCaptureSession.StateCallback sessionStateCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession session) {
+            Log.d(TAG, "onConfigured");
+
             mCaptureSession = session;
             repeatPreview();
         }
 
         @Override
         public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-
+            Log.e(TAG, "onConfigureFailed");
         }
     };
 
     //设置不断重复预览
     private void repeatPreview() {
-        Log.d(TAG, "repeatPreview: success");
+        Log.d(TAG, "repeatPreview");
 
         mPreviewRequestBuilder.setTag(TAG);
         mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
@@ -386,7 +447,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     public static void closeCamera() {
-        Log.d(TAG, "closeCamera: success");
+        Log.d(TAG, "closeCamera");
 
         if (mCaptureSession != null) {
             mCaptureSession.close();
@@ -399,7 +460,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     private void takePhoto() {
-        Log.d(TAG, "takePhoto: success");
+        Log.d(TAG, "takePhoto");
 
         ObjectAnimator scaleXAnim = ObjectAnimator.ofFloat(takePicture, "scaleX", 1f, 0.8f, 1f);
         ObjectAnimator scaleYAnim = ObjectAnimator.ofFloat(takePicture, "scaleY", 1f, 0.8f, 1f);
@@ -430,35 +491,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     };
 
-    //最后拍摄图片的路径
-    private void setLastImagePath() {
-        Log.d(TAG, "setLastImagePath: success");
-
-        imageList = GetImageFilePath.getFilePath();
-        if (imageList.isEmpty()) {
-            mImageView.setImageResource(R.drawable.no_photo);
-        } else {
-            String path = imageList.get(imageList.size() - 1);
-            if (path.contains(".jpg")) {
-                setImageBitmap(path);
-            } else {
-                MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-                retriever.setDataSource(path);
-                Bitmap bitmap = retriever.getFrameAtTime(1);
-                mImageView.setImageBitmap(bitmap);
-            }
-        }
-    }
-
-    private void setImageBitmap(String path) {
-        Log.d(TAG, "setImageBitmap: success");
-
-        Bitmap bitmap = (Bitmap) BitmapFactory.decodeFile(path);
-        mImageView.setImageBitmap(bitmap);
-    }
-
     private void changeCamera() {
-        Log.d(TAG, "changeCamera: success");
+        Log.d(TAG, "changeCamera");
 
         ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, 180f);
         anim.setDuration(300);
@@ -475,7 +509,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     private void openAlbum() {
-        Log.d(TAG, "openAlbum: success");
+        Log.d(TAG, "openAlbum");
 
         ArrayList<String> imgList = new ArrayList<>();
         imageList = GetImageFilePath.getFilePath();
@@ -487,12 +521,13 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     }
 
+
     private class ImageSaver implements Runnable {
         private Image mImage;
         private Context mContext;
 
         public ImageSaver(Context context, Image image) {
-            Log.d(TAG, "ImageSaver: success");
+            Log.d(TAG, "ImageSaver");
             mImage = image;
             mContext = context;
         }
@@ -542,7 +577,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                     Bundle bundle = msg.getData();
                     String myPath = bundle.getString("myPath");
                     imageList.add(myPath);
-                    setLastImagePath();
+                    CameraUtil.setLastImagePath(imageList, mImageView);
                     break;
                 default:
                     throw new IllegalStateException("Unexpected value: " + msg.what);
@@ -551,7 +586,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     };
 
     private void broadcast() {
-        Log.d(TAG, "broadcast: success");
+        Log.d(TAG, "broadcast");
 
         String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/";
         Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);

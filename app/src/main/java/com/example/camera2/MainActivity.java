@@ -14,6 +14,8 @@ public class MainActivity extends AppCompatActivity {
 
     private float x1 = 0;
     private float x2 = 0;
+    private float y1 = 0;
+    private float y2 = 0;
     private int currentView = 0;
 
     private static final String TAG = "MainActivity";
@@ -29,13 +31,13 @@ public class MainActivity extends AppCompatActivity {
         
         if (Build.VERSION.SDK_INT >= 21) {
             View decorView = getWindow().getDecorView();
-            int option = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_FULLSCREEN
+            int option = View.SYSTEM_UI_FLAG_FULLSCREEN
                     | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                     | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
             decorView.setSystemUiVisibility(option);
-            getWindow().setStatusBarColor(Color.BLACK);
-            getWindow().setNavigationBarColor(Color.BLACK);
+            getWindow().setStatusBarColor(Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(0x66666666);
         }
         ActionBar actionBar = getSupportActionBar();
         actionBar.hide();
@@ -45,17 +47,21 @@ public class MainActivity extends AppCompatActivity {
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             x1 = event.getX();
+            y1 = event.getY();
             Log.d("down", x1 + "");
         }
-        if(event.getAction()==MotionEvent.ACTION_UP) {
+        if(event.getAction() == MotionEvent.ACTION_UP) {
             x2 = event.getX();
+            y2 = event.getY();
             Log.d("up", x2 + "");
-        }
 
-        if ((x1 - x2 > 100) && currentView == 0) {
-            changeToRecord();
-        } else if ((x2 - x1 > 100) && currentView == 1) {
-            changeToTakePicture();
+            if (Math.abs(y1 - y2) < Math.abs(x1 - x2)) {
+                if ((x1 - x2 > 100) && currentView == 0) {
+                    changeToRecord();
+                } else if ((x2 - x1 > 100) && currentView == 1) {
+                    changeToTakePicture();
+                }
+            }
         }
 
         return super.onTouchEvent(event);

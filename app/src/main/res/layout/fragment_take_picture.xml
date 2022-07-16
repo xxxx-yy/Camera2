@@ -3,11 +3,40 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <TextureView
-        android:id="@+id/textureView"
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@color/black">
+
+        <TextureView
+            android:id="@+id/textureView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/selected"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="center" />
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="#66666666"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="15dp">
+
+        <TextView
+            android:id="@+id/ratio_selected"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:text="4:3"
+            android:textColor="#ffff8811"
+            android:textSize="18sp" />
+
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,7 +44,8 @@
         android:orientation="vertical"
         android:background="#66666666"
         android:padding="10dp"
-        android:layout_gravity="bottom">
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="48dp">
 
 
         <LinearLayout
@@ -24,6 +54,7 @@
             android:orientation="horizontal"
             android:gravity="center"
             android:padding="5dp">
+
             <TextView
                 android:id="@+id/photoMode"
                 android:layout_width="wrap_content"
@@ -33,6 +64,7 @@
                 android:text="拍照"
                 android:textColor="#ffff8811"
                 android:textSize="17sp" />
+
             <TextView
                 android:id="@+id/recordingMode"
                 android:layout_width="wrap_content"
@@ -41,6 +73,7 @@
                 android:text="视频"
                 android:textColor="@color/white"
                 android:textSize="15sp" />
+
         </LinearLayout>
 
         <LinearLayout
