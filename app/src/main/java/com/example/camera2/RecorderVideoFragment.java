@@ -6,8 +6,6 @@ import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -21,7 +19,6 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.media.MediaMetadataRetriever;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
@@ -280,32 +277,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             Log.e(TAG, "CameraDevice.StateCallback： onError");
         }
     };
-
-//    private void setLastImagePath() {
-//        Log.d(TAG, "setLastImagePath");
-//
-//        imageList = GetImageFilePath.getFilePath();
-//        if (imageList.isEmpty()) {
-//            mImageView.setImageResource(R.drawable.no_photo);
-//        } else {
-//            String path = imageList.get(imageList.size() - 1);
-//            if (path.contains(".jpg")) {
-//                setImageBitmap(path);
-//            } else {
-//                MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-//                retriever.setDataSource(path);
-//                Bitmap bitmap = retriever.getFrameAtTime(1);
-//                mImageView.setImageBitmap(bitmap);
-//            }
-//        }
-//    }
-//
-//    private void setImageBitmap(String path) {
-//        Log.d(TAG, "setImageBitmap");
-//
-//        Bitmap bitmap = (Bitmap) BitmapFactory.decodeFile(path);
-//        mImageView.setImageBitmap(bitmap);
-//    }
 
     private void initChildHandler() {
         mHandlerThread = new HandlerThread("HandlerThread");

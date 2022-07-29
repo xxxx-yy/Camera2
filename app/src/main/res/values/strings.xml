@@ -1,3 +1,15 @@
 <resources>
     <string name="app_name">Camera2</string>
+
+    <string name="photo">拍照</string>
+    <string name="video">视频</string>
+    <string name="ratio4_3">4:3</string>
+    <string name="ratio1_1">1:1</string>
+    <string name="ratio_full">Full</string>
+    <string name="noDelay">OFF</string>
+    <string name="delay3">3s</string>
+    <string name="delay5">5s</string>
+    <string name="delay10">10s</string>
+    <string name="quality480">480P</string>
+    <string name="quality720">720P</string>
 </resources>

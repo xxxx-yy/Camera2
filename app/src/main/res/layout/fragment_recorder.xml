@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/black">
 
     <TextureView
         android:id="@+id/mTextureView"
@@ -13,19 +14,45 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
-        android:background="#66666666"
+        android:background="#00000000"
         android:gravity="center"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:padding="15dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="5dp"
+            android:layout_marginBottom="20dp">
+
+            <TextView
+                android:id="@+id/mPhotoMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="50dp"
+                android:text="@string/photo"
+                android:textColor="@color/white"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/mRecordingMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/video"
+                android:textColor="#ffff8811"
+                android:textSize="20sp" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/videoQuality"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="480P"
-            android:textSize="18sp"
+            android:clickable="true"
+            android:text="@string/quality480"
             android:textColor="@color/white"
-            android:clickable="true" />
+            android:textSize="18sp" />
 
     </LinearLayout>
 
@@ -36,7 +63,7 @@
         android:background="#00000000"
         android:padding="10dp"
         android:layout_gravity="top"
-        android:layout_marginTop="60dp"
+        android:layout_marginTop="100dp"
         android:gravity="center"
         android:visibility="gone">
 
@@ -60,40 +87,17 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#66666666"
-        android:padding="10dp"
         android:layout_gravity="bottom"
-        android:layout_marginBottom="48dp">
+        android:layout_marginBottom="48dp"
+        android:background="#00000000"
+        android:orientation="vertical"
+        android:padding="10dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:gravity="center"
-            android:padding="5dp">
-            <TextView
-                android:id="@+id/mPhotoMode"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginRight="50dp"
-                android:text="拍照"
-                android:textColor="@color/white"
-                android:textSize="15sp" />
-            <TextView
-                android:id="@+id/mRecordingMode"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="视频"
-                android:textColor="#ffff8811"
-                android:textSize="17sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center"
             android:padding="5dp">
 
             <ImageView
@@ -108,15 +112,15 @@
                 android:layout_gravity="center"
                 android:layout_marginLeft="50dp"
                 android:layout_marginRight="50dp"
-                android:src="@drawable/recording"
-                android:background="@drawable/bg" />
+                android:background="@drawable/bg"
+                android:src="@drawable/recording" />
 
             <ImageButton
                 android:id="@+id/mChange"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/change"
-                android:background="@drawable/bg" />
+                android:background="@drawable/bg"
+                android:src="@drawable/change" />
 
         </LinearLayout>
 

@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
                     | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
             decorView.setSystemUiVisibility(option);
             getWindow().setStatusBarColor(Color.TRANSPARENT);
-            getWindow().setNavigationBarColor(0x66666666);
+            getWindow().setNavigationBarColor(0x00000000);
         }
         ActionBar actionBar = getSupportActionBar();
         actionBar.hide();
