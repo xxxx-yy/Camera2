@@ -22,7 +22,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
-        android:background="#00000000"
+        android:background="#66000000"
         android:gravity="center"
         android:orientation="vertical"
         android:padding="10dp">
@@ -67,7 +67,6 @@
                 android:id="@+id/ratio_selected"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="50dp"
                 android:clickable="true"
                 android:text="@string/ratio4_3"
                 android:textColor="#ffff8811"
@@ -78,8 +77,17 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="50dp"
+                android:layout_marginRight="50dp"
                 android:background="@drawable/bg"
                 android:src="@drawable/delay" />
+
+            <ImageButton
+                android:id="@+id/mirror"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg"
+                android:src="@drawable/mirror_off"
+                android:visibility="gone" />
 
         </LinearLayout>
 
@@ -97,17 +105,17 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#00666666"
-        android:padding="10dp"
         android:layout_gravity="bottom"
-        android:layout_marginBottom="48dp">
+        android:layout_marginBottom="48dp"
+        android:background="#66000000"
+        android:orientation="vertical"
+        android:padding="10dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:gravity="center"
+            android:orientation="horizontal"
             android:padding="5dp">
 
             <ImageView
@@ -122,15 +130,15 @@
                 android:layout_gravity="center"
                 android:layout_marginLeft="50dp"
                 android:layout_marginRight="50dp"
-                android:src="@drawable/takephoto"
-                android:background="@drawable/bg" />
+                android:background="@drawable/bg"
+                android:src="@drawable/takephoto" />
 
             <ImageButton
                 android:id="@+id/change"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/change"
-                android:background="@drawable/bg" />
+                android:background="@drawable/bg"
+                android:src="@drawable/change" />
 
         </LinearLayout>
 

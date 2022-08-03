@@ -6,8 +6,11 @@ import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.ColorDrawable;
 import android.hardware.camera2.CameraAccessException;
@@ -51,6 +54,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -103,6 +107,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private int delayState = 0;
     private long delayTime = 0;
     private TextView countdown;
+    private ImageButton mirror;
+    private boolean mirrorFlag = false;
     private int previewWidth;
     private int previewHeight;
     private ImageView mImageView;
@@ -135,6 +141,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         mManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         textureView.setSurfaceTextureListener(textureListener);
 
+        getPermission();
+
         takePicture.setOnClickListener(this);
         change.setOnClickListener(this);
         mImageView.setOnClickListener(this);
@@ -148,7 +156,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         delay5.setOnClickListener(this);
         delay10.setOnClickListener(this);
 
-        getPermission();
+        mirror.setOnClickListener(this);
 
         return view;
     }
@@ -221,6 +229,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         delay10 = delayTimeWindow.getContentView().findViewById(R.id.delay10);
 
         countdown = view.findViewById(R.id.countdown);
+
+        mirror = view.findViewById(R.id.mirror);
     }
 
     @Override
@@ -336,6 +346,15 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 delayTime = 10000;
                 delayTimeWindow.dismiss();
                 takePicture.setImageResource(R.drawable.delay_photo);
+                break;
+            case R.id.mirror:
+                if (mirrorFlag) {
+                    mirrorFlag = false;
+                    mirror.setImageResource(R.drawable.mirror_off);
+                } else {
+                    mirrorFlag = true;
+                    mirror.setImageResource(R.drawable.mirror_on);
+                }
                 break;
         }
     }
@@ -590,9 +609,11 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
             Log.d(TAG, "前置转后置");
             mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_FRONT);
+            mirror.setVisibility(View.GONE);
         } else {
             Log.d(TAG, "后置转前置");
             mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_BACK);
+            mirror.setVisibility(View.VISIBLE);
         }
         mCameraDevice.close();
         openCamera();
@@ -625,10 +646,22 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
             byte[] bytes = new byte[buffer.remaining()];
             buffer.get(bytes);
+
+            if (mirrorFlag) {
+                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, null);
+                Matrix m = new Matrix();
+                m.postScale(-1, 1);
+                bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), m, true);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+                bytes = baos.toByteArray();
+            }
+
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
             Date date = new Date(System.currentTimeMillis());
             String path = Environment.getExternalStorageDirectory() + "/DCIM/Camera/myPicture"
                     + format.format(date) + ".jpg";
+
             File imageFile = new File(path);
             FileOutputStream fos = null;
             try {

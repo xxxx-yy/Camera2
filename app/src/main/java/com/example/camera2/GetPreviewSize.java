@@ -27,6 +27,7 @@ public class GetPreviewSize {
         }
 
         Log.d(TAG, "Device--------width: " + deviceWidth);
+        Log.d(TAG, "Device--------height: " + deviceHeight);
         if (sizeList.size() > 0) {
             result = sizeList.get(0);
             for (int i = 1; i < sizeList.size(); ++i) {
