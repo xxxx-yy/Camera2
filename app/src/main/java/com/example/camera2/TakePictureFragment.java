@@ -64,13 +64,19 @@ import java.util.List;
 public class TakePictureFragment extends Fragment implements View.OnClickListener {
     private static final String TAG = "TakePictureFragment";
 
-    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
+    private static final SparseIntArray FRONT_ORIENTATIONS = new SparseIntArray();
+    private static final SparseIntArray BACK_ORIENTATIONS = new SparseIntArray();
 
     static {
-        ORIENTATIONS.append(Surface.ROTATION_0, 90);
-        ORIENTATIONS.append(Surface.ROTATION_90, 0);
-        ORIENTATIONS.append(Surface.ROTATION_180, 270);
-        ORIENTATIONS.append(Surface.ROTATION_270, 180);
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_0, 270);
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_90, 0);
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_180, 90);
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_270, 180);
+
+        BACK_ORIENTATIONS.append(Surface.ROTATION_0, 90);
+        BACK_ORIENTATIONS.append(Surface.ROTATION_90, 0);
+        BACK_ORIENTATIONS.append(Surface.ROTATION_180, 270);
+        BACK_ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
     private View view;
@@ -402,7 +408,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         @Override
         public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
-            Log.d(TAG, "onSurfaceTextureUpdated");
+//            Log.d(TAG, "onSurfaceTextureUpdated");
         }
     };
 
@@ -552,7 +558,11 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             final CaptureRequest.Builder mCaptureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             mCaptureBuilder.addTarget(mImageReader.getSurface());
             int rotation = getActivity().getWindowManager().getDefaultDisplay().getRotation();
-            mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
+            if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
+                mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, FRONT_ORIENTATIONS.get(rotation));
+            } else {
+                mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, BACK_ORIENTATIONS.get(rotation));
+            }
             mCaptureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
             mCaptureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
             mCaptureSession.stopRepeating();
@@ -591,7 +601,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void openAlbum() {
         Log.d(TAG, "openAlbum");
 
-        ArrayList<String> imgList = new ArrayList<>();
         imageList = GetImageFilePath.getFilePath();
         if (!imageList.isEmpty()) {
             Intent intent = new Intent();
@@ -600,7 +609,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             closeCamera();
         }
     }
-
 
     private class ImageSaver implements Runnable {
         private Image mImage;
