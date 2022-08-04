@@ -13,6 +13,8 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.camera2.util.CameraUtil;
+
 import java.util.ArrayList;
 
 public class ImageShowActivity extends AppCompatActivity {
@@ -26,7 +28,7 @@ public class ImageShowActivity extends AppCompatActivity {
         setContentView(R.layout.activity_image_show);
         Log.e(TAG, "onCreate success!");
         
-        imageList = GetImageFilePath.getFilePath();
+        imageList = CameraUtil.getFilePath();
         lastImagePath = imageList.get(imageList.size() - 1);
         goToGallery(lastImagePath);
     }

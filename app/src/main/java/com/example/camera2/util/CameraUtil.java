@@ -1,15 +1,22 @@
-package com.example.camera2;
+package com.example.camera2.util;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.MediaMetadataRetriever;
+import android.os.Environment;
 import android.util.Log;
 import android.util.Size;
+import android.widget.ImageView;
 
+import com.example.camera2.R;
+
+import java.io.File;
 import java.util.ArrayList;
-
 import java.util.List;
 
-public class GetPreviewSize {
+public class CameraUtil {
 
-    private static final String TAG = "GetPreviewSize";
+    private static final String TAG = "CameraUtil";
 
     //获取最佳预览尺寸
     public static Size getOptimalSize(Size[] sizeMap, int width, int height, int deviceWidth, int deviceHeight) {
@@ -61,5 +68,56 @@ public class GetPreviewSize {
             }
         }
         return sizeMap[0];
+    }
+
+    public static ArrayList<String> getFilePath() {
+        ArrayList<String> imageList = new ArrayList<>();
+        File file = new File(Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera");
+        if (!file.exists()) {
+            file.mkdir();
+        } else if (file.exists() && !file.isDirectory()) {
+            Log.e("GetImageFilePath", "'Camera' already exists, but it isn't a directory.");
+        }
+        File[] dirEpub = file.listFiles();
+        imageList.clear();
+        for (int i = 0; i < dirEpub.length; ++i) {
+            String fileName = dirEpub[i].toString();
+            String tmp = Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera";
+            if (fileName.charAt(tmp.length() + 1) == '.') {
+                continue;
+            }
+            imageList.add(fileName);
+            Log.i("File", "File name = " + fileName);
+        }
+
+        return imageList;
+    }
+
+    //最后拍摄图片的路径
+    public static void setLastImagePath(ArrayList<String> imageList, ImageView imageView) {
+        Log.d(TAG, "setLastImagePath");
+
+        imageList = getFilePath();
+        if (imageList.isEmpty()) {
+            imageView.setImageResource(R.drawable.no_photo);
+        } else {
+            String path = imageList.get(imageList.size() - 1);
+            Bitmap bitmap;
+            if (path.contains(".jpg")) {
+                bitmap = (Bitmap) BitmapFactory.decodeFile(path);
+            } else {
+                MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+                retriever.setDataSource(path);
+                bitmap = retriever.getFrameAtTime(1);
+            }
+            int bitmapW = bitmap.getWidth();
+            int bitmapH = bitmap.getHeight();
+            if (bitmapW < bitmapH) {
+                bitmap = Bitmap.createBitmap(bitmap, 0, (bitmapH - bitmapW) / 2, bitmapW, bitmapW);
+            } else {
+                bitmap = Bitmap.createBitmap(bitmap, (bitmapW - bitmapH) / 2, 0, bitmapH, bitmapH);
+            }
+            imageView.setImageBitmap(bitmap);
+        }
     }
 }

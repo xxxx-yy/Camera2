@@ -48,6 +48,8 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
+import com.example.camera2.util.CameraUtil;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -548,7 +550,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Log.d(TAG, "openAlbum");
 
         ArrayList<String> imgList = new ArrayList<>();
-        imageList = GetImageFilePath.getFilePath();
+        imageList = CameraUtil.getFilePath();
         if (!imageList.isEmpty()) {
             Intent intent = new Intent();
             intent.setClass(getContext(), ImageShowActivity.class);

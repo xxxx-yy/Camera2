@@ -120,8 +120,8 @@
 
             <ImageView
                 android:id="@+id/imageView"
-                android:layout_width="30dp"
-                android:layout_height="40dp" />
+                android:layout_width="@dimen/thumbnailWidth"
+                android:layout_height="@dimen/thumbnailHeight"/>
 
             <ImageButton
                 android:id="@+id/takePhotoBtn"

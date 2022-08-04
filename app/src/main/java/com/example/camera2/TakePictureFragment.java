@@ -54,6 +54,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.example.camera2.util.CameraUtil;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -442,7 +444,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                     continue;
                 }
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                mPreviewSize = GetPreviewSize.getOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
+                mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
                 textureView.setLayoutParams(new LinearLayout.LayoutParams(mPreviewSize.getHeight(), mPreviewSize.getWidth()));
                 textureView.setSurfaceTextureListener(textureListener);
                 mCameraId = cameraId;
@@ -622,7 +624,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void openAlbum() {
         Log.d(TAG, "openAlbum");
 
-        imageList = GetImageFilePath.getFilePath();
+        imageList = CameraUtil.getFilePath();
         if (!imageList.isEmpty()) {
             Intent intent = new Intent();
             intent.setClass(getContext(), ImageShowActivity.class);
