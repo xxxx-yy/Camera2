@@ -1,4 +1,4 @@
-package com.example.camera2;
+package com.example.camera2.mode;
 
 import android.Manifest;
 import android.animation.AnimatorSet;
@@ -48,6 +48,9 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
+import com.example.camera2.ImageShowActivity;
+import com.example.camera2.MainActivity;
+import com.example.camera2.R;
 import com.example.camera2.util.CameraUtil;
 
 import java.io.File;
@@ -169,10 +172,10 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         photoMode = view.findViewById(R.id.mPhotoMode);
         recordingMode = view.findViewById(R.id.mRecordingMode);
         photoMode.setOnClickListener(v -> {
-            ((MainActivity)getActivity()).changeToTakePicture();
+            ((MainActivity)getActivity()).photoMode();
         });
         recordingMode.setOnClickListener(v -> {
-            ((MainActivity)getActivity()).changeToRecord();
+            ((MainActivity)getActivity()).videoMode();
         });
 
         videoQuality = view.findViewById(R.id.videoQuality);

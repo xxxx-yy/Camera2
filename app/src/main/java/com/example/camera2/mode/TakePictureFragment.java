@@ -1,4 +1,4 @@
-package com.example.camera2;
+package com.example.camera2.mode;
 
 import android.Manifest;
 import android.animation.AnimatorSet;
@@ -37,14 +37,15 @@ import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
+import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 
@@ -54,12 +55,17 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.example.camera2.AutoFitTextureView;
+import com.example.camera2.ImageShowActivity;
+import com.example.camera2.MainActivity;
+import com.example.camera2.R;
 import com.example.camera2.util.CameraUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -70,9 +76,14 @@ import java.util.List;
 public class TakePictureFragment extends Fragment implements View.OnClickListener {
     private static final String TAG = "TakePictureFragment";
 
+    private final String[] permissions = {Manifest.permission.CAMERA,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.RECORD_AUDIO};
+    private List<String> permissionList = new ArrayList();
+
     private static final SparseIntArray FRONT_ORIENTATIONS = new SparseIntArray();
     private static final SparseIntArray BACK_ORIENTATIONS = new SparseIntArray();
-
     static {
         FRONT_ORIENTATIONS.append(Surface.ROTATION_0, 270);
         FRONT_ORIENTATIONS.append(Surface.ROTATION_90, 0);
@@ -86,9 +97,9 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     private View view;
-    private TextureView textureView;
-    private ImageButton takePicture;
-    private ImageButton change;
+    private AutoFitTextureView textureView;
+    private ImageButton takePictureBtn;
+    private ImageButton changeBtn;
     private TextView photoMode;
     private TextView recordingMode;
     private TextView ratioSelected;
@@ -100,7 +111,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private int height = 4;
     private int deviceWidth;
     private int deviceHeight;
-    private ImageButton delay;
+    private ImageButton delayBtn;
     private PopupWindow delayTimeWindow;
     private TextView noDelay;
     private TextView delay3;
@@ -110,25 +121,24 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private long delayTime = 0;
     private TextView countdown;
     private ImageButton mirror;
-    private boolean mirrorFlag = false;
-    private int previewWidth;
-    private int previewHeight;
+    private boolean mirrorFlag = true;
     private ImageView mImageView;
-    private String[] permissions = {Manifest.permission.CAMERA,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.RECORD_AUDIO};
-    private List<String> permissionList = new ArrayList();
     private CameraManager mManager;
     private Size mPreviewSize;
     private String mCameraId;
     private Surface mPreviewSurface;
     private ImageReader mImageReader;
-    private static CameraCaptureSession mCaptureSession;
-    private static CameraDevice mCameraDevice;
+    private CameraCaptureSession mCaptureSession;
+    private CameraDevice mCameraDevice;
     private CaptureRequest.Builder mPreviewRequestBuilder;
     private CaptureRequest mPreviewRequest;
     private ArrayList<String> imageList = new ArrayList<>();
+
+    private OrientationEventListener orientationEventListener;
+    private int rotation = 0;
+
+    private final int SAVEIMAGE = 0;
+    private final int THUMBNAIL = 1;
 
     @Nullable
     @Override
@@ -138,27 +148,13 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         view = inflater.inflate(R.layout.fragment_take_picture, container, false);
 
+        getPermission();
         initView(view);
 
         mManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         textureView.setSurfaceTextureListener(textureListener);
 
-        getPermission();
-
-        takePicture.setOnClickListener(this);
-        change.setOnClickListener(this);
-        mImageView.setOnClickListener(this);
-        photoMode.setOnClickListener(this);
-        recordingMode.setOnClickListener(this);
-        ratio1_1.setOnClickListener(this);
-        ratio4_3.setOnClickListener(this);
-        ratioFull.setOnClickListener(this);
-        noDelay.setOnClickListener(this);
-        delay3.setOnClickListener(this);
-        delay5.setOnClickListener(this);
-        delay10.setOnClickListener(this);
-
-        mirror.setOnClickListener(this);
+        clickEvents();
 
         return view;
     }
@@ -188,13 +184,23 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         Log.d(TAG, "initView");
 
         textureView = view.findViewById(R.id.textureView);
-        takePicture = view.findViewById(R.id.takePhotoBtn);
+        takePictureBtn = view.findViewById(R.id.takePhotoBtn);
         mImageView = view.findViewById(R.id.imageView);
-        change = view.findViewById(R.id.change);
-
+        changeBtn = view.findViewById(R.id.change);
         photoMode = view.findViewById(R.id.photoMode);
         recordingMode = view.findViewById(R.id.recordingMode);
+        countdown = view.findViewById(R.id.countdown);
+        mirror = view.findViewById(R.id.mirror);
 
+        initRatio();
+        initDelayTime();
+
+        DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
+        deviceWidth = displayMetrics.widthPixels;
+        deviceHeight = displayMetrics.heightPixels;
+    }
+
+    public void initRatio() {
         ratioSelected = view.findViewById(R.id.ratio_selected);
         ratio = new PopupWindow();
         ratio.setWidth(ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -203,18 +209,17 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         ratio.setOutsideTouchable(true);
         ratio.setBackgroundDrawable(new ColorDrawable(0x00000000));
         ratio.setContentView(LayoutInflater.from(getActivity()).inflate(R.layout.select_ratio, null));
+        ratio.setFocusable(true);
         ratioSelected.setOnClickListener(v -> {
             ratio.showAsDropDown(view.findViewById(R.id.ratio_selected), -120, 0);
         });
         ratio1_1 = ratio.getContentView().findViewById(R.id.ratio_1_1);
         ratio4_3 = ratio.getContentView().findViewById(R.id.ratio_4_3);
         ratioFull = ratio.getContentView().findViewById(R.id.ratio_full);
+    }
 
-        DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
-        deviceWidth = displayMetrics.widthPixels;
-        deviceHeight = displayMetrics.heightPixels;
-
-        delay = view.findViewById(R.id.delay);
+    public void initDelayTime() {
+        delayBtn = view.findViewById(R.id.delay);
         delayTimeWindow = new PopupWindow();
         delayTimeWindow.setWidth(ViewGroup.LayoutParams.WRAP_CONTENT);
         delayTimeWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -222,17 +227,30 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         delayTimeWindow.setOutsideTouchable(true);
         delayTimeWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
         delayTimeWindow.setContentView(LayoutInflater.from(getActivity()).inflate(R.layout.select_delay_time, null));
-        delay.setOnClickListener(v -> {
-            delayTimeWindow.showAsDropDown(view.findViewById(R.id.delay), -155, 0);
+        delayTimeWindow.setFocusable(true);
+        delayBtn.setOnClickListener(v -> {
+                delayTimeWindow.showAsDropDown(view.findViewById(R.id.delay), -155, 0);
         });
         noDelay = delayTimeWindow.getContentView().findViewById(R.id.noDelay);
         delay3 = delayTimeWindow.getContentView().findViewById(R.id.delay3);
         delay5 = delayTimeWindow.getContentView().findViewById(R.id.delay5);
         delay10 = delayTimeWindow.getContentView().findViewById(R.id.delay10);
+    }
 
-        countdown = view.findViewById(R.id.countdown);
-
-        mirror = view.findViewById(R.id.mirror);
+    public void clickEvents() {
+        takePictureBtn.setOnClickListener(this);
+        changeBtn.setOnClickListener(this);
+        mImageView.setOnClickListener(this);
+        photoMode.setOnClickListener(this);
+        recordingMode.setOnClickListener(this);
+        ratio1_1.setOnClickListener(this);
+        ratio4_3.setOnClickListener(this);
+        ratioFull.setOnClickListener(this);
+        noDelay.setOnClickListener(this);
+        delay3.setOnClickListener(this);
+        delay5.setOnClickListener(this);
+        delay10.setOnClickListener(this);
+        mirror.setOnClickListener(this);
     }
 
     @Override
@@ -241,6 +259,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         switch (view.getId()) {
             case R.id.takePhotoBtn:
+                Animation animation = AnimationUtils.loadAnimation(getContext(), R.anim.countdown_timer);
                 if (delayState == 0) {
                     takePhoto();
                 } else {
@@ -249,11 +268,12 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                         public void onTick(long millisUntilFinished) {
                             countdown.setText(millisUntilFinished / 1000 + "");
                             countdown.setVisibility(View.VISIBLE);
-                            countdown.startAnimation(AnimationUtils.loadAnimation(getContext(), R.anim.countdown_timer));
+                            countdown.startAnimation(animation);
                         }
 
                         @Override
                         public void onFinish() {
+                            animation.setFillAfter(false);
                             countdown.setVisibility(View.GONE);
                             takePhoto();
                         }
@@ -267,10 +287,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 openAlbum();
                 break;
             case R.id.photoMode:
-                ((MainActivity) getActivity()).changeToTakePicture();
+                ((MainActivity) getActivity()).photoMode();
                 break;
             case R.id.recordingMode:
-                ((MainActivity) getActivity()).changeToRecord();
+                ((MainActivity) getActivity()).videoMode();
                 break;
             case R.id.ratio_1_1:
                 ratioSelected.setText(ratio1_1.getText());
@@ -310,6 +330,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 openCamera();
                 break;
             case R.id.noDelay:
+                delayBtn.setImageResource(R.drawable.delay_off);
                 noDelay.setTextColor(ratioSelected.getTextColors());
                 delay3.setTextColor(Color.WHITE);
                 delay5.setTextColor(Color.WHITE);
@@ -317,9 +338,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 delayState = 0;
                 delayTime = 0;
                 delayTimeWindow.dismiss();
-                takePicture.setImageResource(R.drawable.takephoto);
+                takePictureBtn.setImageResource(R.drawable.takephoto);
                 break;
             case R.id.delay3:
+                delayBtn.setImageResource(R.drawable.delay_on);
                 delay3.setTextColor(ratioSelected.getTextColors());
                 noDelay.setTextColor(Color.WHITE);
                 delay5.setTextColor(Color.WHITE);
@@ -327,9 +349,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 delayState = 1;
                 delayTime = 3000;
                 delayTimeWindow.dismiss();
-                takePicture.setImageResource(R.drawable.delay_photo);
+                takePictureBtn.setImageResource(R.drawable.delay_photo);
                 break;
             case R.id.delay5:
+                delayBtn.setImageResource(R.drawable.delay_on);
                 delay5.setTextColor(ratioSelected.getTextColors());
                 noDelay.setTextColor(Color.WHITE);
                 delay3.setTextColor(Color.WHITE);
@@ -337,9 +360,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 delayState = 2;
                 delayTime = 5000;
                 delayTimeWindow.dismiss();
-                takePicture.setImageResource(R.drawable.delay_photo);
+                takePictureBtn.setImageResource(R.drawable.delay_photo);
                 break;
             case R.id.delay10:
+                delayBtn.setImageResource(R.drawable.delay_on);
                 delay10.setTextColor(ratioSelected.getTextColors());
                 noDelay.setTextColor(Color.WHITE);
                 delay3.setTextColor(Color.WHITE);
@@ -347,7 +371,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 delayState = 3;
                 delayTime = 10000;
                 delayTimeWindow.dismiss();
-                takePicture.setImageResource(R.drawable.delay_photo);
+                takePictureBtn.setImageResource(R.drawable.delay_photo);
                 break;
             case R.id.mirror:
                 if (mirrorFlag) {
@@ -373,9 +397,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             }
             if (!permissionList.isEmpty()) {
                 requestPermissions(permissionList.toArray(new String[permissionList.size()]), 1);
-            } else {
-                textureView.setSurfaceTextureListener(textureListener);
-                CameraUtil.setLastImagePath(imageList, mImageView);
             }
         }
     }
@@ -388,16 +409,16 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         if (requestCode == 1 && grantResults.length > 0) {
             List<String> deniedPermissions = new ArrayList<>();
+
             for (int i = 0; i < grantResults.length; ++i) {
                 int result = grantResults[i];
-                String permission = permissions[result];
+                String permission = permissions[i];
                 if (result != PackageManager.PERMISSION_GRANTED) {
                     deniedPermissions.add(permission);
                 }
             }
             if (deniedPermissions.isEmpty()) {
                 openCamera();
-                CameraUtil.setLastImagePath(imageList, mImageView);
             } else {
                 getPermission();
             }
@@ -410,8 +431,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
             Log.d(TAG, "onSurfaceTextureAvailable");
 
-            previewWidth = width;
-            previewHeight = height;
             setupCamera();
             openCamera();
         }
@@ -419,6 +438,37 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         @Override
         public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
             Log.d(TAG, "onSurfaceTextureSizeChanged");
+            Matrix matrix = CameraUtil.configureTransform(getActivity(), textureView.getWidth(), textureView.getHeight(), mPreviewSize);
+            textureView.setTransform(matrix);
+
+            orientationEventListener = new OrientationEventListener(getContext()) {
+                @Override
+                public void onOrientationChanged(int orientation) {
+                    Log.d(TAG, "onOrientationChanged");
+                    if (orientation == OrientationEventListener.ORIENTATION_UNKNOWN) {
+                        return;
+                    }
+                    int tempRotation = rotation;
+                    if (orientation > 315 || orientation < 45) {
+                        rotation = 0;
+                    } else if (orientation > 225 && orientation < 315) {
+                        rotation = 1;
+                    } else if (orientation > 135 && orientation < 225) {
+                        rotation = 2;
+                    } else if (orientation > 45 && orientation < 135) {
+                        rotation = 3;
+                    }
+                    if (rotation != tempRotation) {
+                        CameraUtil.rotationAnim(getActivity(), view, rotation);
+                    }
+                }
+            };
+            if (orientationEventListener.canDetectOrientation()) {
+                orientationEventListener.enable();
+            } else {
+                orientationEventListener.disable();
+                Log.e(TAG, "当前设备不支持手机旋转！");
+            }
         }
 
         @Override
@@ -445,7 +495,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 }
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
-                textureView.setLayoutParams(new LinearLayout.LayoutParams(mPreviewSize.getHeight(), mPreviewSize.getWidth()));
+//                textureView.setLayoutParams(new LinearLayout.LayoutParams(mPreviewSize.getHeight(), mPreviewSize.getWidth()));
+                textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 textureView.setSurfaceTextureListener(textureListener);
                 mCameraId = cameraId;
                 break;
@@ -463,6 +514,14 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 return;
             } else {
+                int rotation = getActivity().getWindowManager().getDefaultDisplay().getOrientation();
+                if (rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180) {
+                    textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
+                } else {
+                    textureView.setAspectRation(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+                }
+                Matrix matrix = CameraUtil.configureTransform(getActivity(), textureView.getWidth(), textureView.getHeight(), mPreviewSize);
+                textureView.setTransform(matrix);
                 mManager.openCamera(mCameraId, stateCallback, null);
             }
         } catch (CameraAccessException e) {
@@ -516,8 +575,25 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 Log.d(TAG, "图片已保存");
 
                 Image image = reader.acquireNextImage();
-                ImageSaver imageSaver = new ImageSaver(getContext(), image);
-                new Thread(imageSaver).start();
+                ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+                byte[] bytes = new byte[buffer.remaining()];
+                buffer.get(bytes);
+                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, null);
+
+                ImageSaver imageSaver = new ImageSaver(getContext(), bitmap, bytes);
+                image.close();
+                if (bitmap != null && !bitmap.isRecycled()) {
+                    bitmap.recycle();
+                    bitmap = null;
+                }
+
+                Message msg = new Message();
+                msg.what = SAVEIMAGE;
+                Bundle mBundle = new Bundle();
+                mBundle.putSerializable("imageSaver", imageSaver);
+                msg.setData(mBundle);
+                handler.sendMessage(msg);
+//                new Thread(imageSaver).start();
             }
         }, null);
     }
@@ -553,7 +629,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     }
 
-    public static void closeCamera() {
+    public void closeCamera() {
         Log.d(TAG, "closeCamera");
 
         if (mCaptureSession != null) {
@@ -569,8 +645,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void takePhoto() {
         Log.d(TAG, "takePhoto");
 
-        ObjectAnimator scaleXAnim = ObjectAnimator.ofFloat(takePicture, "scaleX", 1f, 0.8f, 1f);
-        ObjectAnimator scaleYAnim = ObjectAnimator.ofFloat(takePicture, "scaleY", 1f, 0.8f, 1f);
+        ObjectAnimator scaleXAnim = ObjectAnimator.ofFloat(takePictureBtn, "scaleX", 1f, 0.8f, 1f);
+        ObjectAnimator scaleYAnim = ObjectAnimator.ofFloat(takePictureBtn, "scaleY", 1f, 0.8f, 1f);
         AnimatorSet set = new AnimatorSet();
         set.play(scaleXAnim).with(scaleYAnim);
         set.setDuration(300);
@@ -578,7 +654,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         try {
             final CaptureRequest.Builder mCaptureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             mCaptureBuilder.addTarget(mImageReader.getSurface());
-            int rotation = getActivity().getWindowManager().getDefaultDisplay().getRotation();
             if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
                 mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, FRONT_ORIENTATIONS.get(rotation));
             } else {
@@ -605,7 +680,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void changeCamera() {
         Log.d(TAG, "changeCamera");
 
-        ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, 180f);
+        ObjectAnimator anim = ObjectAnimator.ofFloat(changeBtn, "rotation", 0f, 180f);
         anim.setDuration(300);
         anim.start();
         if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
@@ -633,42 +708,41 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     }
 
-    private class ImageSaver implements Runnable {
-        private Image mImage;
+    private class ImageSaver implements Runnable, Serializable {
         private Context mContext;
+        private Bitmap mBitmap;
+        private byte[] mBytes;
+        private boolean flag = mirrorFlag;
 
-        public ImageSaver(Context context, Image image) {
+        public ImageSaver(Context context, Bitmap bitmap, byte[] bytes) {
             Log.d(TAG, "ImageSaver");
-            mImage = image;
+            mBitmap = bitmap;
             mContext = context;
+            mBytes = bytes;
         }
 
         @Override
         public void run() {
-            ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-
-            if (mirrorFlag) {
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, null);
+            if (flag && mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
                 Matrix m = new Matrix();
                 m.postScale(-1, 1);
-                bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), m, true);
+                mBitmap = Bitmap.createBitmap(mBitmap, 0, 0, mBitmap.getWidth(), mBitmap.getHeight(), m, true);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-                bytes = baos.toByteArray();
+                mBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+                mBytes = baos.toByteArray();
             }
 
+            //TODO AndroidQ之后 保存图片路径
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
             Date date = new Date(System.currentTimeMillis());
-            String path = Environment.getExternalStorageDirectory() + "/DCIM/Camera/myPicture"
-                    + format.format(date) + ".jpg";
+            String sDate = format.format(date);
 
+            String path = Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera/myPicture" + sDate + ".jpg";
             File imageFile = new File(path);
             FileOutputStream fos = null;
             try {
                 fos = new FileOutputStream(imageFile);
-                fos.write(bytes, 0, bytes.length);
+                fos.write(mBytes, 0, mBytes.length);
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
@@ -681,12 +755,11 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 }
                 broadcast();
                 Message msg = new Message();
-                msg.what = 0;
+                msg.what = THUMBNAIL;
                 Bundle mBundle = new Bundle();
                 mBundle.putString("myPath", path);
                 msg.setData(mBundle);
                 handler.sendMessage(msg);
-                mImage.close();
             }
         }
     }
@@ -695,15 +768,19 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         @Override
         public void handleMessage(@NonNull Message msg) {
             super.handleMessage(msg);
+            Bundle bundle;
             switch (msg.what) {
-                case 0:
-                    Bundle bundle = msg.getData();
+                case SAVEIMAGE:
+                    bundle = msg.getData();
+                    ImageSaver imageSaver = (ImageSaver) bundle.getSerializable("imageSaver");
+                    imageSaver.run();
+                    break;
+                case THUMBNAIL:
+                    bundle = msg.getData();
                     String myPath = bundle.getString("myPath");
                     imageList.add(myPath);
                     CameraUtil.setLastImagePath(imageList, mImageView);
                     break;
-                default:
-                    throw new IllegalStateException("Unexpected value: " + msg.what);
             }
         }
     };

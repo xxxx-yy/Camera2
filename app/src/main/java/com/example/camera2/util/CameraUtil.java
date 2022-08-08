@@ -1,11 +1,18 @@
 package com.example.camera2.util;
 
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.media.MediaMetadataRetriever;
 import android.os.Environment;
 import android.util.Log;
 import android.util.Size;
+import android.view.Surface;
+import android.view.View;
 import android.widget.ImageView;
 
 import com.example.camera2.R;
@@ -60,6 +67,7 @@ public class CameraUtil {
                         }
                     }
                 }
+                result = new Size(1600, 720);
                 if (result != null) {
                     Log.e(TAG, "Full选择的分辨率宽度 = " + result.getHeight());
                     Log.e(TAG, "Full选择的分辨率高度 = " + result.getWidth());
@@ -97,6 +105,7 @@ public class CameraUtil {
     public static void setLastImagePath(ArrayList<String> imageList, ImageView imageView) {
         Log.d(TAG, "setLastImagePath");
 
+        //TODO bitmap未销毁 内存泄漏
         imageList = getFilePath();
         if (imageList.isEmpty()) {
             imageView.setImageResource(R.drawable.no_photo);
@@ -110,14 +119,67 @@ public class CameraUtil {
                 retriever.setDataSource(path);
                 bitmap = retriever.getFrameAtTime(1);
             }
-            int bitmapW = bitmap.getWidth();
-            int bitmapH = bitmap.getHeight();
-            if (bitmapW < bitmapH) {
-                bitmap = Bitmap.createBitmap(bitmap, 0, (bitmapH - bitmapW) / 2, bitmapW, bitmapW);
-            } else {
-                bitmap = Bitmap.createBitmap(bitmap, (bitmapW - bitmapH) / 2, 0, bitmapH, bitmapH);
-            }
             imageView.setImageBitmap(bitmap);
+
+//            if (bitmap != null && !bitmap.isRecycled()) {
+//                bitmap.recycle();
+//                bitmap = null;
+//            }
         }
+    }
+
+    public static Matrix configureTransform(Activity activity, int width, int height, Size previewSize) {
+        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+        Matrix matrix = new Matrix();
+        RectF viewRect = new RectF(0, 0, width, height);
+        RectF bufferRect = new RectF(0, 0, previewSize.getHeight(), previewSize.getWidth());
+        float centerX = viewRect.centerX();
+        float centerY = viewRect.centerY();
+        if (rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
+            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
+            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
+            float scale = Math.max(
+                    (float) height / previewSize.getHeight(),
+                    (float) width / previewSize.getWidth());
+            matrix.postScale(scale, scale, centerX, centerY);
+            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
+        } else if (Surface.ROTATION_180 == rotation) {
+            matrix.postRotate(180, centerX, centerY);
+        }
+        return matrix;
+    }
+
+    public static void rotationAnim(Activity activity, View view, int rotation) {
+        float toValue = 0;
+        if (rotation == 0) {
+            toValue = 0;
+        } else if (rotation == 1) {
+            toValue = 90;
+        } else if (rotation == 2) {
+            toValue = 180;
+        } else if (rotation == 3) {
+            toValue = -90;
+        }
+        ObjectAnimator changeAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.change), "rotation", 0f, toValue);
+        ObjectAnimator previewAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.imageView), "rotation", 0f, toValue);
+        ObjectAnimator buttonAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.takePhotoBtn), "rotation", 0f, toValue);
+        ObjectAnimator ratioAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.ratio_selected), "rotation", 0f, toValue);
+        ObjectAnimator ratio1_1Anim = ObjectAnimator.ofFloat(view.findViewById(R.id.ratio_1_1), "rotation", 0f, toValue);
+        ObjectAnimator ratio4_3Anim = ObjectAnimator.ofFloat(view.findViewById(R.id.ratio_4_3), "rotation", 0f, toValue);
+        ObjectAnimator ratioFullAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.ratio_full), "rotation", 0f, toValue);
+        ObjectAnimator delayAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.delay), "rotation", 0f, toValue);
+        ObjectAnimator delayOffAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.noDelay), "rotation", 0f, toValue);
+//        ObjectAnimator delay3Anim = ObjectAnimator.ofFloat(LayoutInflater.from(activity).inflate(R.layout.select_delay_time, null).findViewById(R.id.delay3), "rotation", 0f, toValue);
+        ObjectAnimator delay5Anim = ObjectAnimator.ofFloat(view.findViewById(R.id.delay5), "rotation", 0f, toValue);
+        ObjectAnimator delay10Anim = ObjectAnimator.ofFloat(view.findViewById(R.id.delay10), "rotation", 0f, toValue);
+        ObjectAnimator photoAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.photoMode), "rotation", 0f, toValue);
+        ObjectAnimator videoAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.recordingMode), "rotation", 0f, toValue);
+        ObjectAnimator mirrorAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.mirror), "rotation", 0f, toValue);
+        AnimatorSet set = new AnimatorSet();
+        set.play(changeAnim).with(previewAnim).with(buttonAnim).with(ratioAnim).with(ratio1_1Anim)
+                .with(ratio4_3Anim).with(ratioFullAnim).with(delayAnim).with(delayOffAnim)
+                .with(delay5Anim).with(delay10Anim).with(photoAnim).with(videoAnim).with(mirrorAnim);
+        set.setDuration(300);
+        set.start();
     }
 }
