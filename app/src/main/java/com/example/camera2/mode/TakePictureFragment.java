@@ -11,6 +11,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.ColorDrawable;
 import android.hardware.camera2.CameraAccessException;
@@ -20,7 +22,9 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
+import android.hardware.camera2.params.Face;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
@@ -55,7 +59,9 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import com.example.camera2.AutoFitTextureView;
+import com.example.camera2.view.AutoFitTextureView;
+import com.example.camera2.FaceDetectListener;
+import com.example.camera2.view.FaceView;
 import com.example.camera2.ImageShowActivity;
 import com.example.camera2.MainActivity;
 import com.example.camera2.R;
@@ -80,7 +86,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.RECORD_AUDIO};
-    private List<String> permissionList = new ArrayList();
+    private final List<String> permissionList = new ArrayList();
 
     private static final SparseIntArray FRONT_ORIENTATIONS = new SparseIntArray();
     private static final SparseIntArray BACK_ORIENTATIONS = new SparseIntArray();
@@ -100,8 +106,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private AutoFitTextureView textureView;
     private ImageButton takePictureBtn;
     private ImageButton changeBtn;
-    private TextView photoMode;
-    private TextView recordingMode;
+    private ImageButton photoMode;
+    private ImageButton recordingMode;
     private TextView ratioSelected;
     private PopupWindow ratio;
     private TextView ratio1_1;
@@ -125,20 +131,25 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private ImageView mImageView;
     private CameraManager mManager;
     private Size mPreviewSize;
-    private String mCameraId;
-    private Surface mPreviewSurface;
+    private String mCameraId = "";
     private ImageReader mImageReader;
     private CameraCaptureSession mCaptureSession;
     private CameraDevice mCameraDevice;
     private CaptureRequest.Builder mPreviewRequestBuilder;
-    private CaptureRequest mPreviewRequest;
     private ArrayList<String> imageList = new ArrayList<>();
 
-    private OrientationEventListener orientationEventListener;
     private int rotation = 0;
 
     private final int SAVEIMAGE = 0;
-    private final int THUMBNAIL = 1;
+
+    private int mFaceDetectMode;
+    private float scaledWidth;
+    private float scaledHeight;
+    private float sizeScaledWidth;
+    private float sizeScaledHeight;
+    private ArrayList<RectF> mFacesRect = new ArrayList<>();
+    private FaceDetectListener mFaceDetectListener;
+    private FaceView faceView;
 
     @Nullable
     @Override
@@ -180,6 +191,46 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         closeCamera();
     }
 
+    //获取权限
+    private void getPermission() {
+        Log.d(TAG, "getPermission");
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            for (String permission : permissions) {
+                if (ContextCompat.checkSelfPermission(getContext(), permission) != PackageManager.PERMISSION_GRANTED) {
+                    permissionList.add(permission);
+                }
+            }
+            if (!permissionList.isEmpty()) {
+                requestPermissions(permissionList.toArray(new String[permissionList.size()]), 1);
+            }
+        }
+    }
+
+    //权限回调
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        Log.d(TAG, "onRequestPermissionResult");
+
+        if (requestCode == 1 && grantResults.length > 0) {
+            List<String> deniedPermissions = new ArrayList<>();
+
+            for (int i = 0; i < grantResults.length; ++i) {
+                int result = grantResults[i];
+                String permission = permissions[i];
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    deniedPermissions.add(permission);
+                }
+            }
+            if (deniedPermissions.isEmpty()) {
+                openCamera();
+            } else {
+                getPermission();
+            }
+        }
+    }
+
     private void initView(View view) {
         Log.d(TAG, "initView");
 
@@ -198,6 +249,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
         deviceWidth = displayMetrics.widthPixels;
         deviceHeight = displayMetrics.heightPixels;
+
+        faceView = view.findViewById(R.id.faceView);
     }
 
     public void initRatio() {
@@ -259,26 +312,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         switch (view.getId()) {
             case R.id.takePhotoBtn:
-                Animation animation = AnimationUtils.loadAnimation(getContext(), R.anim.countdown_timer);
-                if (delayState == 0) {
-                    takePhoto();
-                } else {
-                    new CountDownTimer(delayTime + 300, 1000) {
-                        @Override
-                        public void onTick(long millisUntilFinished) {
-                            countdown.setText(millisUntilFinished / 1000 + "");
-                            countdown.setVisibility(View.VISIBLE);
-                            countdown.startAnimation(animation);
-                        }
-
-                        @Override
-                        public void onFinish() {
-                            animation.setFillAfter(false);
-                            countdown.setVisibility(View.GONE);
-                            takePhoto();
-                        }
-                    }.start();
-                }
+                handleTakePhotoEvent();
                 break;
             case R.id.change:
                 changeCamera();
@@ -293,85 +327,25 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 ((MainActivity) getActivity()).videoMode();
                 break;
             case R.id.ratio_1_1:
-                ratioSelected.setText(ratio1_1.getText());
-                ratio1_1.setTextColor(ratioSelected.getTextColors());
-                ratio4_3.setTextColor(Color.WHITE);
-                ratioFull.setTextColor(Color.WHITE);
-                ratio.dismiss();
-                width = 1;
-                height = 1;
-                closeCamera();
-                setupCamera();
-                openCamera();
+                handleRatio1_1();
                 break;
             case R.id.ratio_4_3:
-                ratioSelected.setText(ratio4_3.getText());
-                ratio4_3.setTextColor(ratioSelected.getTextColors());
-                ratio1_1.setTextColor(Color.WHITE);
-                ratioFull.setTextColor(Color.WHITE);
-                ratio.dismiss();
-                width = 3;
-                height = 4;
-                closeCamera();
-                setupCamera();
-                openCamera();
+                handleRatio4_3();
                 break;
             case R.id.ratio_full:
-                ratioSelected.setText(ratioFull.getText());
-                ratioFull.setTextColor(ratioSelected.getTextColors());
-                ratio1_1.setTextColor(Color.WHITE);
-                ratio4_3.setTextColor(Color.WHITE);
-                ratio.dismiss();
-                width = deviceWidth;
-                height = deviceHeight;
-                Log.d(TAG, "device++++++++width: " + width + ", height: " + height);
-                closeCamera();
-                setupCamera();
-                openCamera();
+                handleRatioFull();
                 break;
             case R.id.noDelay:
-                delayBtn.setImageResource(R.drawable.delay_off);
-                noDelay.setTextColor(ratioSelected.getTextColors());
-                delay3.setTextColor(Color.WHITE);
-                delay5.setTextColor(Color.WHITE);
-                delay10.setTextColor(Color.WHITE);
-                delayState = 0;
-                delayTime = 0;
-                delayTimeWindow.dismiss();
-                takePictureBtn.setImageResource(R.drawable.takephoto);
+                handleNoDelay();
                 break;
             case R.id.delay3:
-                delayBtn.setImageResource(R.drawable.delay_on);
-                delay3.setTextColor(ratioSelected.getTextColors());
-                noDelay.setTextColor(Color.WHITE);
-                delay5.setTextColor(Color.WHITE);
-                delay10.setTextColor(Color.WHITE);
-                delayState = 1;
-                delayTime = 3000;
-                delayTimeWindow.dismiss();
-                takePictureBtn.setImageResource(R.drawable.delay_photo);
+                handleDelay3();
                 break;
             case R.id.delay5:
-                delayBtn.setImageResource(R.drawable.delay_on);
-                delay5.setTextColor(ratioSelected.getTextColors());
-                noDelay.setTextColor(Color.WHITE);
-                delay3.setTextColor(Color.WHITE);
-                delay10.setTextColor(Color.WHITE);
-                delayState = 2;
-                delayTime = 5000;
-                delayTimeWindow.dismiss();
-                takePictureBtn.setImageResource(R.drawable.delay_photo);
+                handleDelay5();
                 break;
             case R.id.delay10:
-                delayBtn.setImageResource(R.drawable.delay_on);
-                delay10.setTextColor(ratioSelected.getTextColors());
-                noDelay.setTextColor(Color.WHITE);
-                delay3.setTextColor(Color.WHITE);
-                delay5.setTextColor(Color.WHITE);
-                delayState = 3;
-                delayTime = 10000;
-                delayTimeWindow.dismiss();
-                takePictureBtn.setImageResource(R.drawable.delay_photo);
+                handleDelay10();
                 break;
             case R.id.mirror:
                 if (mirrorFlag) {
@@ -385,44 +359,115 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     }
 
-    //获取权限
-    private void getPermission() {
-        Log.d(TAG, "getPermission");
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            for (String permission : permissions) {
-                if (ContextCompat.checkSelfPermission(getContext(), permission) != PackageManager.PERMISSION_GRANTED) {
-                    permissionList.add(permission);
+    private void handleTakePhotoEvent() {
+        Animation animation = AnimationUtils.loadAnimation(getContext(), R.anim.countdown_timer);
+        if (delayState == 0) {
+            takePhoto();
+        } else {
+            new CountDownTimer(delayTime + 300, 1000) {
+                @Override
+                public void onTick(long millisUntilFinished) {
+                    countdown.setText(millisUntilFinished / 1000 + "");
+                    countdown.setVisibility(View.VISIBLE);
+                    countdown.startAnimation(animation);
                 }
-            }
-            if (!permissionList.isEmpty()) {
-                requestPermissions(permissionList.toArray(new String[permissionList.size()]), 1);
-            }
+
+                @Override
+                public void onFinish() {
+                    animation.setFillAfter(false);
+                    countdown.setVisibility(View.GONE);
+                    takePhoto();
+                }
+            }.start();
         }
     }
 
-    //权限回调
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        Log.d(TAG, "onRequestPermissionResult");
+    private void handleRatio1_1() {
+        ratioSelected.setText(ratio1_1.getText());
+        ratio1_1.setTextColor(ratioSelected.getTextColors());
+        ratio4_3.setTextColor(Color.WHITE);
+        ratioFull.setTextColor(Color.WHITE);
+        ratio.dismiss();
+        width = 1;
+        height = 1;
+        closeCamera();
+        setupCamera();
+        openCamera();
+    }
 
-        if (requestCode == 1 && grantResults.length > 0) {
-            List<String> deniedPermissions = new ArrayList<>();
+    private void handleRatio4_3() {
+        ratioSelected.setText(ratio4_3.getText());
+        ratio4_3.setTextColor(ratioSelected.getTextColors());
+        ratio1_1.setTextColor(Color.WHITE);
+        ratioFull.setTextColor(Color.WHITE);
+        ratio.dismiss();
+        width = 3;
+        height = 4;
+        closeCamera();
+        setupCamera();
+        openCamera();
+    }
 
-            for (int i = 0; i < grantResults.length; ++i) {
-                int result = grantResults[i];
-                String permission = permissions[i];
-                if (result != PackageManager.PERMISSION_GRANTED) {
-                    deniedPermissions.add(permission);
-                }
-            }
-            if (deniedPermissions.isEmpty()) {
-                openCamera();
-            } else {
-                getPermission();
-            }
-        }
+    private void handleRatioFull() {
+        ratioSelected.setText(ratioFull.getText());
+        ratioFull.setTextColor(ratioSelected.getTextColors());
+        ratio1_1.setTextColor(Color.WHITE);
+        ratio4_3.setTextColor(Color.WHITE);
+        ratio.dismiss();
+        width = deviceWidth;
+        height = deviceHeight;
+        Log.d(TAG, "device++++++++width: " + width + ", height: " + height);
+        closeCamera();
+        setupCamera();
+        openCamera();
+    }
+
+    private void handleNoDelay() {
+        delayBtn.setImageResource(R.drawable.delay_off);
+        noDelay.setTextColor(ratioSelected.getTextColors());
+        delay3.setTextColor(Color.WHITE);
+        delay5.setTextColor(Color.WHITE);
+        delay10.setTextColor(Color.WHITE);
+        delayState = 0;
+        delayTime = 0;
+        delayTimeWindow.dismiss();
+        takePictureBtn.setImageResource(R.drawable.takephoto);
+    }
+
+    private void handleDelay3() {
+        delayBtn.setImageResource(R.drawable.delay_on);
+        delay3.setTextColor(ratioSelected.getTextColors());
+        noDelay.setTextColor(Color.WHITE);
+        delay5.setTextColor(Color.WHITE);
+        delay10.setTextColor(Color.WHITE);
+        delayState = 1;
+        delayTime = 3000;
+        delayTimeWindow.dismiss();
+        takePictureBtn.setImageResource(R.drawable.delay_photo);
+    }
+
+    private void handleDelay5() {
+        delayBtn.setImageResource(R.drawable.delay_on);
+        delay5.setTextColor(ratioSelected.getTextColors());
+        noDelay.setTextColor(Color.WHITE);
+        delay3.setTextColor(Color.WHITE);
+        delay10.setTextColor(Color.WHITE);
+        delayState = 2;
+        delayTime = 5000;
+        delayTimeWindow.dismiss();
+        takePictureBtn.setImageResource(R.drawable.delay_photo);
+    }
+
+    private void handleDelay10() {
+        delayBtn.setImageResource(R.drawable.delay_on);
+        delay10.setTextColor(ratioSelected.getTextColors());
+        noDelay.setTextColor(Color.WHITE);
+        delay3.setTextColor(Color.WHITE);
+        delay5.setTextColor(Color.WHITE);
+        delayState = 3;
+        delayTime = 10000;
+        delayTimeWindow.dismiss();
+        takePictureBtn.setImageResource(R.drawable.delay_photo);
     }
 
     //TextureView回调
@@ -441,10 +486,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             Matrix matrix = CameraUtil.configureTransform(getActivity(), textureView.getWidth(), textureView.getHeight(), mPreviewSize);
             textureView.setTransform(matrix);
 
-            orientationEventListener = new OrientationEventListener(getContext()) {
+            OrientationEventListener orientationEventListener = new OrientationEventListener(getContext()) {
                 @Override
                 public void onOrientationChanged(int orientation) {
-                    Log.d(TAG, "onOrientationChanged");
+//                    Log.d(TAG, "onOrientationChanged");
                     if (orientation == OrientationEventListener.ORIENTATION_UNKNOWN) {
                         return;
                     }
@@ -487,18 +532,58 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     public void setupCamera() {
         Log.d(TAG, "setupCamera");
 
+        String tempId = "";
+        if (mCameraId != "") {
+            tempId = mCameraId;
+        }
         try {
             for (String cameraId : mManager.getCameraIdList()) {
                 CameraCharacteristics characteristics = mManager.getCameraCharacteristics(cameraId);
+
                 if (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
                     continue;
                 }
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
-//                textureView.setLayoutParams(new LinearLayout.LayoutParams(mPreviewSize.getHeight(), mPreviewSize.getWidth()));
                 textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 textureView.setSurfaceTextureListener(textureListener);
                 mCameraId = cameraId;
+                if (tempId != "") {
+                    mCameraId = tempId;
+                }
+
+                int[] faceDetectModes = characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES);
+                int faceDetectCount = characteristics.get(CameraCharacteristics.STATISTICS_INFO_MAX_FACE_COUNT);
+                for (int i = 0; i < faceDetectModes.length; ++i) {
+                    Log.d(TAG, "Face detect modes: " + faceDetectModes[i]);
+                    if (faceDetectModes[i] == CaptureRequest.STATISTICS_FACE_DETECT_MODE_FULL) {
+                        Log.d(TAG, "MODE_FULL: " + faceDetectModes[i]);
+                        mFaceDetectMode = faceDetectModes[i];
+                        break;
+                    } else if (faceDetectModes[i] == CaptureRequest.STATISTICS_FACE_DETECT_MODE_SIMPLE) {
+                        Log.d(TAG, "MODE_SIMPLE: " + faceDetectModes[i]);
+                        mFaceDetectMode = faceDetectModes[i];
+                    } else {
+                        Log.d(TAG, "MODE_OFF: " + faceDetectModes[i]);
+                        mFaceDetectMode = CaptureRequest.STATISTICS_FACE_DETECT_MODE_OFF;
+                    }
+                }
+                Log.d(TAG, "mFaceDetectMode: " + mFaceDetectMode);
+                Log.d(TAG, "faceDetectCount: " + faceDetectCount);
+                Rect activeArraySizeRect = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+                scaledWidth = mPreviewSize.getWidth() / (float) activeArraySizeRect.width();
+                scaledHeight = mPreviewSize.getHeight() / (float) activeArraySizeRect.height();
+                float previewRatio = (float) mPreviewSize.getWidth() / mPreviewSize.getHeight();
+                float activeArraySizeRectRatio = (float) activeArraySizeRect.width() / activeArraySizeRect.height();
+                if (previewRatio != activeArraySizeRectRatio) {
+                    sizeScaledWidth = sizeScaledHeight = Math.max(scaledWidth, scaledHeight);
+                } else {
+                    sizeScaledWidth = scaledWidth;
+                    sizeScaledHeight = scaledHeight;
+                }
+                Log.d(TAG, "成像区域  " + activeArraySizeRect.width() + "*" + activeArraySizeRect.height());
+                Log.d(TAG, "预览区域  " + mPreviewSize.getWidth() + "*" + mPreviewSize.getHeight());
+
                 break;
             }
         } catch (CameraAccessException e) {
@@ -529,6 +614,19 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     }
 
+    public void closeCamera() {
+        Log.d(TAG, "closeCamera");
+
+        if (mCaptureSession != null) {
+            mCaptureSession.close();
+            mCaptureSession = null;
+        }
+        if (mCameraDevice != null) {
+            mCameraDevice.close();
+            mCameraDevice = null;
+        }
+    }
+
     //打开相机回调
     private CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
         @Override
@@ -556,10 +654,13 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         setupImageReader();
         SurfaceTexture mSurfaceTexture = textureView.getSurfaceTexture();
         mSurfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-        mPreviewSurface = new Surface(mSurfaceTexture);
+        Surface mPreviewSurface = new Surface(mSurfaceTexture);
         try {
             mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(mPreviewSurface);
+            if (mFaceDetectMode != CameraCharacteristics.STATISTICS_FACE_DETECT_MODE_OFF) {
+                mPreviewRequestBuilder.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE, mFaceDetectMode);
+            }
             mCameraDevice.createCaptureSession(Arrays.asList(mPreviewSurface, mImageReader.getSurface()), sessionStateCallback, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -582,24 +683,28 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
                 ImageSaver imageSaver = new ImageSaver(getContext(), bitmap, bytes);
                 image.close();
-                if (bitmap != null && !bitmap.isRecycled()) {
-                    bitmap.recycle();
-                    bitmap = null;
-                }
+//                if (bitmap != null && !bitmap.isRecycled()) {
+//                    bitmap.recycle();
+//                    bitmap = null;
+//                }
 
-                Message msg = new Message();
-                msg.what = SAVEIMAGE;
                 Bundle mBundle = new Bundle();
                 mBundle.putSerializable("imageSaver", imageSaver);
+                Message msg = Message.obtain();
                 msg.setData(mBundle);
-                handler.sendMessage(msg);
-//                new Thread(imageSaver).start();
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        msg.what = SAVEIMAGE;
+                        handler.sendMessage(msg);
+                    }
+                }).start();
             }
         }, null);
     }
 
     //CameraCaptureSession状态回调
-    private CameraCaptureSession.StateCallback sessionStateCallback = new CameraCaptureSession.StateCallback() {
+    private final CameraCaptureSession.StateCallback sessionStateCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession session) {
             Log.d(TAG, "onConfigured");
@@ -616,31 +721,29 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
     //设置不断重复预览
     private void repeatPreview() {
-        Log.d(TAG, "repeatPreview");
+//        Log.d(TAG, "repeatPreview");
 
         mPreviewRequestBuilder.setTag(TAG);
         mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
         mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
-        mPreviewRequest = mPreviewRequestBuilder.build();
+        CaptureRequest mPreviewRequest = mPreviewRequestBuilder.build();
         try {
-            mCaptureSession.setRepeatingRequest(mPreviewRequest, null, null);
+            mCaptureSession.setRepeatingRequest(mPreviewRequest, captureCallback, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
 
-    public void closeCamera() {
-        Log.d(TAG, "closeCamera");
-
-        if (mCaptureSession != null) {
-            mCaptureSession.close();
-            mCaptureSession = null;
+    //CameraCaptureSession拍照回调
+    private final CameraCaptureSession.CaptureCallback captureCallback = new CameraCaptureSession.CaptureCallback() {
+        @Override
+        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+            super.onCaptureCompleted(session, request, result);
+            Log.d(TAG, "onCaptureCompleted");
+//            repeatPreview();
+            handleFaces(result);
         }
-        if (mCameraDevice != null) {
-            mCameraDevice.close();
-            mCameraDevice = null;
-        }
-    }
+    };
 
     private void takePhoto() {
         Log.d(TAG, "takePhoto");
@@ -661,21 +764,12 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             }
             mCaptureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
             mCaptureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
-            mCaptureSession.stopRepeating();
-            mCaptureSession.capture(mCaptureBuilder.build(), captureCallback, null);
+//            mCaptureSession.stopRepeating();
+            mCaptureSession.capture(mCaptureBuilder.build(), null, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
-
-    //CameraCaptureSession拍照回调
-    private final CameraCaptureSession.CaptureCallback captureCallback = new CameraCaptureSession.CaptureCallback() {
-        @Override
-        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-            super.onCaptureCompleted(session, request, result);
-            repeatPreview();
-        }
-    };
 
     private void changeCamera() {
         Log.d(TAG, "changeCamera");
@@ -692,8 +786,57 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_BACK);
             mirror.setVisibility(View.VISIBLE);
         }
-        mCameraDevice.close();
+        closeCamera();
         openCamera();
+    }
+
+    class FaceDetect implements FaceDetectListener {
+        @Override
+        public void onFaceDetect(Face[] faces, ArrayList<RectF> facesRect) {
+            faceView.setFaces(facesRect);
+        }
+    }
+
+    public void setFaceDetectListener(FaceDetectListener listener) {
+        this.mFaceDetectListener = listener;
+    }
+
+    private void handleFaces(TotalCaptureResult result) {
+//        Log.d(TAG, "handleFaces");
+
+        Face[] faces = result.get(CaptureResult.STATISTICS_FACES);
+        if (mFacesRect != null) {
+            mFacesRect.clear();
+        }
+        for (int i = 0; i < faces.length; ++i) {
+            Rect bounds = faces[i].getBounds();
+            int left = bounds.left;
+            int right = bounds.right;
+            int top = bounds.top;
+            int bottom = bounds.bottom;
+            Log.d("BEFORE", bounds.width() + "*" + bounds.height() + "    left: " + left + "  top: " + top +
+                    "  right: " + right + " bottom: " + bottom);
+            RectF rawFaceRect;
+            if (scaledWidth > scaledHeight) {
+                rawFaceRect = new RectF((float) left * sizeScaledWidth, (float) top * scaledHeight, right * sizeScaledWidth, (float) top * scaledHeight + bounds.height() * sizeScaledHeight);
+            } else {
+                rawFaceRect = new RectF((float) left * scaledWidth, (float) top * sizeScaledHeight, left * scaledWidth + bounds.width() * sizeScaledWidth, (float) bottom * sizeScaledHeight);
+            }
+
+            RectF resultFaceRect;
+            if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_FRONT))) {
+                resultFaceRect = new RectF(mPreviewSize.getHeight() - rawFaceRect.bottom, rawFaceRect.left + textureView.getTop(), mPreviewSize.getHeight() - rawFaceRect.top, rawFaceRect.right + textureView.getTop());
+            } else {
+                resultFaceRect = new RectF(mPreviewSize.getHeight() - rawFaceRect.bottom, mPreviewSize.getWidth() - rawFaceRect.right + textureView.getTop(), mPreviewSize.getHeight() - rawFaceRect.top, mPreviewSize.getWidth() - rawFaceRect.left + textureView.getTop());
+            }
+            Log.d("TextureView", "top: " + textureView.getTop());
+            Log.d("AFTER", resultFaceRect.width() + "*" + resultFaceRect.height() +
+                    "    left: " + resultFaceRect.left + "  top: " + resultFaceRect.top +
+                    "  right: " + resultFaceRect.right + "  bottom: " + resultFaceRect.bottom);
+            mFacesRect.add(resultFaceRect);
+        }
+        setFaceDetectListener(new FaceDetect());
+        mFaceDetectListener.onFaceDetect(faces, mFacesRect);
     }
 
     private void openAlbum() {
@@ -754,17 +897,13 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                     }
                 }
                 broadcast();
-                Message msg = new Message();
-                msg.what = THUMBNAIL;
-                Bundle mBundle = new Bundle();
-                mBundle.putString("myPath", path);
-                msg.setData(mBundle);
-                handler.sendMessage(msg);
+                imageList.add(path);
+                CameraUtil.setLastImagePath(imageList, mImageView);
             }
         }
     }
 
-    private Handler handler = new Handler(Looper.myLooper()) {
+    private final Handler handler = new Handler(Looper.myLooper()) {
         @Override
         public void handleMessage(@NonNull Message msg) {
             super.handleMessage(msg);
@@ -774,12 +913,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                     bundle = msg.getData();
                     ImageSaver imageSaver = (ImageSaver) bundle.getSerializable("imageSaver");
                     imageSaver.run();
-                    break;
-                case THUMBNAIL:
-                    bundle = msg.getData();
-                    String myPath = bundle.getString("myPath");
-                    imageList.add(myPath);
-                    CameraUtil.setLastImagePath(imageList, mImageView);
                     break;
             }
         }

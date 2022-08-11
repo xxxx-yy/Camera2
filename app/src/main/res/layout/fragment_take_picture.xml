@@ -4,18 +4,16 @@
     android:layout_height="match_parent"
     android:background="@color/black">
 
-    <LinearLayout
+    <com.example.camera2.view.AutoFitTextureView
+        android:id="@+id/textureView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"/>
+
+    <com.example.camera2.view.FaceView
+        android:id="@+id/faceView"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center">
-
-        <com.example.camera2.AutoFitTextureView
-            android:id="@+id/textureView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="center"/>
-
-    </LinearLayout>
+        android:layout_height="wrap_content" />
 
     <LinearLayout
         android:id="@+id/selected"
@@ -35,28 +33,20 @@
             android:orientation="horizontal"
             android:padding="5dp">
 
-            <TextView
+            <ImageButton
                 android:id="@+id/photoMode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="50dp"
-                android:clickable="true"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
-                android:text="@string/photo"
-                android:textColor="#ffff8811"
-                android:textSize="20sp" />
+                android:background="@drawable/bg"
+                android:src="@drawable/photo_selected" />
 
-            <TextView
+            <ImageButton
                 android:id="@+id/recordingMode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:clickable="true"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
-                android:text="@string/video"
-                android:textColor="@color/white"
-                android:textSize="15sp" />
+                android:background="@drawable/bg"
+                android:src="@drawable/video" />
 
         </LinearLayout>
 

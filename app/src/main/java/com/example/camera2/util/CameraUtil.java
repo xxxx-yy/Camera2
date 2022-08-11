@@ -67,7 +67,6 @@ public class CameraUtil {
                         }
                     }
                 }
-                result = new Size(1600, 720);
                 if (result != null) {
                     Log.e(TAG, "Full选择的分辨率宽度 = " + result.getHeight());
                     Log.e(TAG, "Full选择的分辨率高度 = " + result.getWidth());

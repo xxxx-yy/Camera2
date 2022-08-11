@@ -17,32 +17,30 @@
         android:background="#66000000"
         android:gravity="center"
         android:orientation="vertical"
-        android:padding="15dp">
+        android:padding="10dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="30dp"
             android:gravity="center"
             android:orientation="horizontal"
             android:padding="5dp">
 
-            <TextView
+            <ImageButton
                 android:id="@+id/mPhotoMode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="50dp"
-                android:text="@string/photo"
-                android:textColor="@color/white"
-                android:textSize="15sp" />
+                android:background="@drawable/bg"
+                android:src="@drawable/photo" />
 
-            <TextView
+            <ImageButton
                 android:id="@+id/mRecordingMode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/video"
-                android:textColor="#ffff8811"
-                android:textSize="20sp" />
+                android:background="@drawable/bg"
+                android:src="@drawable/video_selected" />
         </LinearLayout>
 
         <TextView

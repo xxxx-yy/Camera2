@@ -70,8 +70,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private ImageButton change;
     private Chronometer timer;
     private LinearLayout timerBg;
-    private TextView photoMode;
-    private TextView recordingMode;
+    private ImageButton photoMode;
+    private ImageButton recordingMode;
     private TextView videoQuality;
     private CaptureRequest.Builder mPreviewCaptureRequestBuilder;
 
