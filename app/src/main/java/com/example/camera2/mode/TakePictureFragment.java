@@ -3,6 +3,7 @@ package com.example.camera2.mode;
 import android.Manifest;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -147,9 +148,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private float scaledHeight;
     private float sizeScaledWidth;
     private float sizeScaledHeight;
-    private ArrayList<RectF> mFacesRect = new ArrayList<>();
+    private final ArrayList<RectF> mFacesRect = new ArrayList<>();
     private FaceDetectListener mFaceDetectListener;
     private FaceView faceView;
+    private ImageView mask;
 
     @Nullable
     @Override
@@ -160,6 +162,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         view = inflater.inflate(R.layout.fragment_take_picture, container, false);
 
         getPermission();
+
         initView(view);
 
         mManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
@@ -207,7 +210,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     }
 
-    //权限回调
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -242,15 +244,13 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         recordingMode = view.findViewById(R.id.recordingMode);
         countdown = view.findViewById(R.id.countdown);
         mirror = view.findViewById(R.id.mirror);
-
         initRatio();
         initDelayTime();
-
         DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
         deviceWidth = displayMetrics.widthPixels;
         deviceHeight = displayMetrics.heightPixels;
-
         faceView = view.findViewById(R.id.faceView);
+        mask = view.findViewById(R.id.mask);
     }
 
     public void initRatio() {
@@ -306,6 +306,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         mirror.setOnClickListener(this);
     }
 
+    @SuppressLint("NonConstantResourceId")
     @Override
     public void onClick(View view) {
         Log.d(TAG, "onClick");
@@ -390,6 +391,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         ratio.dismiss();
         width = 1;
         height = 1;
+        mask.setVisibility(View.VISIBLE);
         closeCamera();
         setupCamera();
         openCamera();
@@ -403,6 +405,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         ratio.dismiss();
         width = 3;
         height = 4;
+        mask.setVisibility(View.VISIBLE);
         closeCamera();
         setupCamera();
         openCamera();
@@ -417,6 +420,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         width = deviceWidth;
         height = deviceHeight;
         Log.d(TAG, "device++++++++width: " + width + ", height: " + height);
+        mask.setVisibility(View.VISIBLE);
         closeCamera();
         setupCamera();
         openCamera();
@@ -547,6 +551,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
                 textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 textureView.setSurfaceTextureListener(textureListener);
+                mask.setLayoutParams(textureView.getLayoutParams());
                 mCameraId = cameraId;
                 if (tempId != "") {
                     mCameraId = tempId;
@@ -592,7 +597,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     //打开相机
-    private void openCamera() {
+    public void openCamera() {
         Log.d(TAG, "openCamera");
 
         try {
@@ -624,6 +629,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         if (mCameraDevice != null) {
             mCameraDevice.close();
             mCameraDevice = null;
+        }
+        if (mImageReader != null) {
+            mImageReader.close();
+            mImageReader = null;
         }
     }
 
@@ -669,7 +678,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
     //获取摄像头的图像数据
     private void setupImageReader() {
-        mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.JPEG, 1);
+        mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.JPEG, 2);
         mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader reader) {
@@ -681,13 +690,14 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 buffer.get(bytes);
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, null);
 
-                ImageSaver imageSaver = new ImageSaver(getContext(), bitmap, bytes);
                 image.close();
+                reader.close();
 //                if (bitmap != null && !bitmap.isRecycled()) {
 //                    bitmap.recycle();
 //                    bitmap = null;
 //                }
 
+                ImageSaver imageSaver = new ImageSaver(getContext(), bitmap, bytes);
                 Bundle mBundle = new Bundle();
                 mBundle.putSerializable("imageSaver", imageSaver);
                 Message msg = Message.obtain();
@@ -729,7 +739,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         CaptureRequest mPreviewRequest = mPreviewRequestBuilder.build();
         try {
             mCaptureSession.setRepeatingRequest(mPreviewRequest, captureCallback, null);
-        } catch (CameraAccessException e) {
+            Thread.sleep(450);
+            mask.setVisibility(View.GONE);
+            Log.d("~~~~~~~~~~~~~~", "GONE");
+        } catch (CameraAccessException | InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -764,7 +777,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             }
             mCaptureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
             mCaptureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
-//            mCaptureSession.stopRepeating();
             mCaptureSession.capture(mCaptureBuilder.build(), null, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();

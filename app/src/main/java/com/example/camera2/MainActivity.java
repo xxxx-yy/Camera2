@@ -1,8 +1,12 @@
 package com.example.camera2;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -12,6 +16,9 @@ import android.view.WindowManager;
 
 import com.example.camera2.mode.RecorderVideoFragment;
 import com.example.camera2.mode.TakePictureFragment;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 

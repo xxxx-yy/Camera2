@@ -1,13 +1,16 @@
 package com.example.camera2.util;
 
+import android.Manifest;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.media.MediaMetadataRetriever;
+import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
 import android.util.Size;
@@ -15,6 +18,9 @@ import android.view.Surface;
 import android.view.View;
 import android.widget.ImageView;
 
+import androidx.core.content.ContextCompat;
+
+import com.example.camera2.MainActivity;
 import com.example.camera2.R;
 
 import java.io.File;

@@ -58,18 +58,18 @@
         android:id="@+id/timerBg"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#00000000"
-        android:padding="10dp"
         android:layout_gravity="top"
-        android:layout_marginTop="100dp"
+        android:layout_marginTop="150dp"
+        android:background="#00000000"
         android:gravity="center"
+        android:padding="10dp"
         android:visibility="gone">
 
         <ImageView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/point"
-            android:layout_marginRight="10dp"/>
+            android:layout_marginRight="10dp"
+            android:background="@drawable/point" />
 
         <Chronometer
             android:id="@+id/timer"
@@ -100,8 +100,9 @@
 
             <ImageView
                 android:id="@+id/mImageView"
-                android:layout_width="30dp"
-                android:layout_height="40dp" />
+                android:layout_width="@dimen/thumbnailWidth"
+                android:layout_height="@dimen/thumbnailWidth"
+                android:scaleType="centerCrop" />
 
             <ImageButton
                 android:id="@+id/recordingBtn"
