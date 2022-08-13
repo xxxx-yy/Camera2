@@ -16,7 +16,6 @@ public class FaceView extends View {
 
     private final String TAG = "FaceView";
     private Paint mPaint;
-    private int mColor = 0xFFFF8811;
     private ArrayList<RectF> mFaces;
 
     public FaceView(Context context) {
@@ -37,6 +36,7 @@ public class FaceView extends View {
     public void init() {
         Log.d(TAG, "init()");
 
+        int mColor = 0xFFFF8811;
         mPaint = new Paint();
         mPaint.setColor(mColor);
         mPaint.setStyle(Paint.Style.STROKE);

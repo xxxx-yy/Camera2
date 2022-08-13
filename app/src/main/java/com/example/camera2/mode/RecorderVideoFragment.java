@@ -58,7 +58,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Objects;
 
 public class RecorderVideoFragment extends Fragment implements View.OnClickListener {
     private static final String TAG = "RecorderVideoFragment";
@@ -82,7 +81,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
-    private String mCameraId;
+    private String mCameraId = "";
     private CameraDevice mCameraDevice;
     private Size mPreviewSize;
     private CameraCaptureSession mCameraCaptureSession;
@@ -112,7 +111,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Log.d(TAG, "onResume");
 
         super.onResume();
-        CameraUtil.setLastImagePath(imageList, mImageView);
+        CameraUtil.setLastImagePath(mImageView);
         if (textureView.isAvailable()) {
             setUpCamera();
             openCamera();
@@ -175,27 +174,22 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 changeCamera();
                 break;
             case R.id.photoMode:
-                ((MainActivity)getActivity()).photoMode();
+                ((MainActivity) requireActivity()).photoMode();
                 break;
             case R.id.recordingMode:
-                ((MainActivity)getActivity()).videoMode();
+                ((MainActivity) requireActivity()).videoMode();
                 break;
             case R.id.videoQuality:
                 if (videoQuality.getText() == getString(R.string.quality480)) {
                     quality = getString(R.string.quality720);
-                    videoQuality.setText(quality);
-                    mask.setVisibility(View.VISIBLE);
-                    closeCamera();
-                    setUpCamera();
-                    openCamera();
                 } else {
                     quality = getString(R.string.quality480);
-                    videoQuality.setText(quality);
-                    mask.setVisibility(View.VISIBLE);
-                    closeCamera();
-                    setUpCamera();
-                    openCamera();
                 }
+                videoQuality.setText(quality);
+                mask.setVisibility(View.VISIBLE);
+                closeCamera();
+                setUpCamera();
+                openCamera();
                 break;
         }
     }
@@ -247,7 +241,11 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private void setUpCamera() {
         Log.d(TAG, "setupCamera");
 
-        mCameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
+        mCameraManager = (CameraManager) requireActivity().getSystemService(Context.CAMERA_SERVICE);
+        String tempId = "";
+        if (!mCameraId.equals("")) {
+            tempId = mCameraId;
+        }
         try {
             for (String cameraId : mCameraManager.getCameraIdList()) {
                 CameraCharacteristics characteristics = mCameraManager.getCameraCharacteristics(cameraId);
@@ -260,6 +258,9 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 mask.setLayoutParams(textureView.getLayoutParams());
                 mCameraId = cameraId;
+                if (!tempId.equals("")) {
+                    mCameraId = tempId;
+                }
                 break;
             }
         } catch (CameraAccessException e) {
@@ -272,7 +273,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
         initChildHandler();
         try {
-            if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 return;
             } else {
                 mCameraManager.openCamera(mCameraId, stateCallback, null);
@@ -335,7 +336,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private Size getMatchingSize(Size[] sizes, String quality) {
         Size selectSize = null;
         for (Size itemSize: sizes) {
-            if (Objects.equals(quality, getString(R.string.quality480))) {
+            if (quality.equals(getString(R.string.quality480))) {
                 if ((itemSize.getWidth() == 640 && itemSize.getHeight() == 480) ||
                         (itemSize.getWidth() == 720 && itemSize.getHeight() == 480)) {
                     selectSize = itemSize;
@@ -347,8 +348,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             }
         }
 
-        Log.d(TAG, "getMatchingSize: 选择的分辨率宽度 = " + selectSize.getHeight());
-        Log.d(TAG, "getMatchingSize: 选择的分辨率高度 = " + selectSize.getWidth());
+        Log.d(TAG, "getMatchingSize: 选择的分辨率宽度 = " + (selectSize != null ? selectSize.getHeight() : 0));
+        Log.d(TAG, "getMatchingSize: 选择的分辨率高度 = " + (selectSize != null ? selectSize.getWidth() : 0));
 
         return selectSize;
     }
@@ -439,9 +440,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
         Date date = new Date(System.currentTimeMillis());
         File file = new File(Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera/myVideo" + format.format(date) + ".mp4");
-        if (file.exists()) {
-            file.delete();
-        }
         if (mMediaRecorder == null) {
             mMediaRecorder = new MediaRecorder();
         }
@@ -536,8 +534,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             mMediaRecorder.reset();
             endTime();
         }
-        CameraUtil.broadcast(getActivity());
-        CameraUtil.setLastImagePath(imageList, mImageView);
+        CameraUtil.broadcast(requireActivity());
+        CameraUtil.setLastImagePath(mImageView);
         startPreview();
     }
 

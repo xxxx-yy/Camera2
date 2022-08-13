@@ -63,7 +63,6 @@ public class CameraUtil {
                         if (result != null) {
                             if (Math.abs(deviceHeight - itemSize.getWidth()) < Math.abs(deviceHeight - result.getWidth())) {
                                 result = itemSize;
-                                continue;
                             }
                         } else {
                             result = itemSize;
@@ -84,38 +83,44 @@ public class CameraUtil {
         ArrayList<String> imageList = new ArrayList<>();
         File file = new File(Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera");
         if (!file.exists()) {
-            file.mkdir();
+            boolean res = file.mkdir();
+            if (res) {
+                Log.d(TAG, "mkdir success");
+            } else {
+                Log.e(TAG, "mkdir fail");
+            }
         } else if (file.exists() && !file.isDirectory()) {
             Log.e("GetImageFilePath", "'Camera' already exists, but it isn't a directory.");
         }
         File[] dirEpub = file.listFiles();
-        imageList.clear();
-        for (int i = 0; i < dirEpub.length; ++i) {
-            String fileName = dirEpub[i].toString();
-            String tmp = Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera";
-            if (fileName.charAt(tmp.length() + 1) == '.') {
-                continue;
+        if (dirEpub != null) {
+            for (File value : dirEpub) {
+                String fileName = value.toString();
+                String tmp = Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera";
+                if (fileName.charAt(tmp.length() + 1) == '.') {
+                    continue;
+                }
+                imageList.add(fileName);
+                Log.i("File", "File name = " + fileName);
             }
-            imageList.add(fileName);
-            Log.i("File", "File name = " + fileName);
         }
 
         return imageList;
     }
 
     //最后拍摄图片的路径
-    public static void setLastImagePath(ArrayList<String> imageList, ImageView imageView) {
+    public static void setLastImagePath(ImageView imageView) {
         Log.d(TAG, "setLastImagePath");
 
         //TODO bitmap未销毁 内存泄漏
-        imageList = getFilePath();
+        ArrayList<String> imageList = getFilePath();
         if (imageList.isEmpty()) {
             imageView.setImageResource(R.drawable.no_photo);
         } else {
             String path = imageList.get(imageList.size() - 1);
             Bitmap bitmap;
             if (path.contains(".jpg")) {
-                bitmap = (Bitmap) BitmapFactory.decodeFile(path);
+                bitmap = BitmapFactory.decodeFile(path);
             } else {
                 MediaMetadataRetriever retriever = new MediaMetadataRetriever();
                 retriever.setDataSource(path);
@@ -172,7 +177,7 @@ public class CameraUtil {
         return matrix;
     }
 
-    public static void rotationAnim(Activity activity, View view, int rotation) {
+    public static void rotationAnim(View view, int rotation) {
         float toValue = 0;
         if (rotation == 0) {
             toValue = 0;

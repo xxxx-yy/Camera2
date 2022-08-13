@@ -19,17 +19,15 @@ import java.util.ArrayList;
 
 public class ImageShowActivity extends AppCompatActivity {
     private final static String TAG = "ImageShowActivity";
-    private String lastImagePath;
-    private ArrayList<String> imageList = new ArrayList<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_show);
         Log.e(TAG, "onCreate success!");
-        
-        imageList = CameraUtil.getFilePath();
-        lastImagePath = imageList.get(imageList.size() - 1);
+
+        ArrayList<String> imageList = CameraUtil.getFilePath();
+        String lastImagePath = imageList.get(imageList.size() - 1);
         goToGallery(lastImagePath);
     }
 

@@ -3,7 +3,6 @@ package com.example.camera2;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -17,8 +16,6 @@ public class MainActivity extends AppCompatActivity {
 
     private float downX = 0;
     private float downY = 0;
-    private float upX = 0;
-    private float upY = 0;
     private int currentMode = 0;    //0: photoMode, 1: videoMode
 
     private static final String TAG = "MainActivity";
@@ -40,16 +37,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void fullScreen() {
-        if (Build.VERSION.SDK_INT >= 21) {
-            View decorView = getWindow().getDecorView();
-            int option = View.SYSTEM_UI_FLAG_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
-            decorView.setSystemUiVisibility(option);
-            getWindow().setStatusBarColor(0x00000000);
-            getWindow().setNavigationBarColor(0x00000000);
-        }
+        View decorView = getWindow().getDecorView();
+        int option = View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+        decorView.setSystemUiVisibility(option);
+        getWindow().setStatusBarColor(0x00000000);
+        getWindow().setNavigationBarColor(0x00000000);
         ActionBar actionBar = getSupportActionBar();
         actionBar.hide();
     }
@@ -62,8 +57,8 @@ public class MainActivity extends AppCompatActivity {
             Log.d("down", "x: " + downX);
         }
         if(event.getAction() == MotionEvent.ACTION_UP) {
-            upX = event.getX();
-            upY = event.getY();
+            float upX = event.getX();
+            float upY = event.getY();
             Log.d("up", "x: " + upX);
 
             if (Math.abs(downY - upY) < Math.abs(downX - upX)) {
@@ -92,11 +87,5 @@ public class MainActivity extends AppCompatActivity {
         TakePictureFragment fragment = new TakePictureFragment();
         getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).commit();
         currentMode = 0;
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-//        TakePictureFragment.closeCamera();
     }
 }

@@ -134,7 +134,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private CameraCaptureSession mCaptureSession;
     private CameraDevice mCameraDevice;
     private CaptureRequest.Builder mPreviewRequestBuilder;
-    private ArrayList<String> imageList = new ArrayList<>();
+    private final ArrayList<String> imageList = new ArrayList<>();
 
     private int rotation = 0;
 
@@ -162,7 +162,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         initView(view);
 
-        mManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
+        mManager = (CameraManager) requireActivity().getSystemService(Context.CAMERA_SERVICE);
         textureView.setSurfaceTextureListener(textureListener);
 
         clickEvents();
@@ -175,7 +175,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         Log.d(TAG, "onResume");
 
         super.onResume();
-        CameraUtil.setLastImagePath(imageList, mImageView);
+        CameraUtil.setLastImagePath(mImageView);
         if (textureView.isAvailable()) {
             openCamera();
         } else {
@@ -197,12 +197,12 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             for (String permission : permissions) {
-                if (ContextCompat.checkSelfPermission(getContext(), permission) != PackageManager.PERMISSION_GRANTED) {
+                if (ContextCompat.checkSelfPermission(requireContext(), permission) != PackageManager.PERMISSION_GRANTED) {
                     permissionList.add(permission);
                 }
             }
             if (!permissionList.isEmpty()) {
-                requestPermissions(permissionList.toArray(new String[permissionList.size()]), 1);
+                requestPermissions(permissionList.toArray(new String[0]), 1);
             }
         }
     }
@@ -250,6 +250,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         mask = view.findViewById(R.id.photoMask);
     }
 
+    @SuppressLint("InflateParams")
     public void initRatio() {
         ratioSelected = view.findViewById(R.id.ratio_selected);
         ratio = new PopupWindow();
@@ -260,14 +261,13 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         ratio.setBackgroundDrawable(new ColorDrawable(0x00000000));
         ratio.setContentView(LayoutInflater.from(getActivity()).inflate(R.layout.select_ratio, null));
         ratio.setFocusable(true);
-        ratioSelected.setOnClickListener(v -> {
-            ratio.showAsDropDown(view.findViewById(R.id.ratio_selected), -120, 0);
-        });
+        ratioSelected.setOnClickListener(v -> ratio.showAsDropDown(view.findViewById(R.id.ratio_selected), -120, 0));
         ratio1_1 = ratio.getContentView().findViewById(R.id.ratio_1_1);
         ratio4_3 = ratio.getContentView().findViewById(R.id.ratio_4_3);
         ratioFull = ratio.getContentView().findViewById(R.id.ratio_full);
     }
 
+    @SuppressLint("InflateParams")
     public void initDelayTime() {
         delayBtn = view.findViewById(R.id.delay);
         delayTimeWindow = new PopupWindow();
@@ -278,9 +278,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         delayTimeWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
         delayTimeWindow.setContentView(LayoutInflater.from(getActivity()).inflate(R.layout.select_delay_time, null));
         delayTimeWindow.setFocusable(true);
-        delayBtn.setOnClickListener(v -> {
-                delayTimeWindow.showAsDropDown(view.findViewById(R.id.delay), -155, 0);
-        });
+        delayBtn.setOnClickListener(v -> delayTimeWindow.showAsDropDown(view.findViewById(R.id.delay), -155, 0));
         noDelay = delayTimeWindow.getContentView().findViewById(R.id.noDelay);
         delay3 = delayTimeWindow.getContentView().findViewById(R.id.delay3);
         delay5 = delayTimeWindow.getContentView().findViewById(R.id.delay5);
@@ -319,10 +317,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 CameraUtil.openAlbum(getContext());
                 break;
             case R.id.photoMode:
-                ((MainActivity) getActivity()).photoMode();
+                ((MainActivity) requireActivity()).photoMode();
                 break;
             case R.id.recordingMode:
-                ((MainActivity) getActivity()).videoMode();
+                ((MainActivity) requireActivity()).videoMode();
                 break;
             case R.id.ratio_1_1:
                 handleRatio1_1();
@@ -363,6 +361,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             takePhoto();
         } else {
             new CountDownTimer(delayTime + 300, 1000) {
+                @SuppressLint("SetTextI18n")
                 @Override
                 public void onTick(long millisUntilFinished) {
                     countdown.setText(millisUntilFinished / 1000 + "");
@@ -484,7 +483,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         @Override
         public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
             Log.d(TAG, "onSurfaceTextureSizeChanged");
-            Matrix matrix = CameraUtil.configureTransform(getActivity(), textureView.getWidth(), textureView.getHeight(), mPreviewSize);
+            Matrix matrix = CameraUtil.configureTransform(requireActivity(), textureView.getWidth(), textureView.getHeight(), mPreviewSize);
             textureView.setTransform(matrix);
 
             OrientationEventListener orientationEventListener = new OrientationEventListener(getContext()) {
@@ -505,7 +504,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                         rotation = 3;
                     }
                     if (rotation != tempRotation) {
-                        CameraUtil.rotationAnim(getActivity(), view, rotation);
+                        CameraUtil.rotationAnim(view, rotation);
                     }
                 }
             };
@@ -534,7 +533,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         Log.d(TAG, "setupCamera");
 
         String tempId = "";
-        if (mCameraId != "") {
+        if (!mCameraId.equals("")) {
             tempId = mCameraId;
         }
         try {
@@ -550,23 +549,23 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 textureView.setSurfaceTextureListener(textureListener);
                 mask.setLayoutParams(textureView.getLayoutParams());
                 mCameraId = cameraId;
-                if (tempId != "") {
+                if (!tempId.equals("")) {
                     mCameraId = tempId;
                 }
 
                 int[] faceDetectModes = characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES);
                 int faceDetectCount = characteristics.get(CameraCharacteristics.STATISTICS_INFO_MAX_FACE_COUNT);
-                for (int i = 0; i < faceDetectModes.length; ++i) {
-                    Log.d(TAG, "Face detect modes: " + faceDetectModes[i]);
-                    if (faceDetectModes[i] == CaptureRequest.STATISTICS_FACE_DETECT_MODE_FULL) {
-                        Log.d(TAG, "MODE_FULL: " + faceDetectModes[i]);
-                        mFaceDetectMode = faceDetectModes[i];
+                for (int faceDetectMode : faceDetectModes) {
+                    Log.d(TAG, "Face detect modes: " + faceDetectMode);
+                    if (faceDetectMode == CaptureRequest.STATISTICS_FACE_DETECT_MODE_FULL) {
+                        Log.d(TAG, "MODE_FULL: " + faceDetectMode);
+                        mFaceDetectMode = faceDetectMode;
                         break;
-                    } else if (faceDetectModes[i] == CaptureRequest.STATISTICS_FACE_DETECT_MODE_SIMPLE) {
-                        Log.d(TAG, "MODE_SIMPLE: " + faceDetectModes[i]);
-                        mFaceDetectMode = faceDetectModes[i];
+                    } else if (faceDetectMode == CaptureRequest.STATISTICS_FACE_DETECT_MODE_SIMPLE) {
+                        Log.d(TAG, "MODE_SIMPLE: " + faceDetectMode);
+                        mFaceDetectMode = faceDetectMode;
                     } else {
-                        Log.d(TAG, "MODE_OFF: " + faceDetectModes[i]);
+                        Log.d(TAG, "MODE_OFF: " + faceDetectMode);
                         mFaceDetectMode = CaptureRequest.STATISTICS_FACE_DETECT_MODE_OFF;
                     }
                 }
@@ -598,16 +597,16 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         Log.d(TAG, "openCamera");
 
         try {
-            if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 return;
             } else {
-                int rotation = getActivity().getWindowManager().getDefaultDisplay().getOrientation();
+                int rotation = requireActivity().getWindowManager().getDefaultDisplay().getOrientation();
                 if (rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180) {
                     textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 } else {
                     textureView.setAspectRation(mPreviewSize.getWidth(), mPreviewSize.getHeight());
                 }
-                Matrix matrix = CameraUtil.configureTransform(getActivity(), textureView.getWidth(), textureView.getHeight(), mPreviewSize);
+                Matrix matrix = CameraUtil.configureTransform(requireActivity(), textureView.getWidth(), textureView.getHeight(), mPreviewSize);
                 textureView.setTransform(matrix);
                 mManager.openCamera(mCameraId, stateCallback, null);
             }
@@ -634,7 +633,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     //打开相机回调
-    private CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
+    private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
             Log.d(TAG, "CameraDevice.StateCallback： onOpened");
@@ -694,17 +693,14 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 //                    bitmap = null;
 //                }
 
-                ImageSaver imageSaver = new ImageSaver(getContext(), bitmap, bytes);
+                ImageSaver imageSaver = new ImageSaver(bitmap, bytes);
                 Bundle mBundle = new Bundle();
                 mBundle.putSerializable("imageSaver", imageSaver);
                 Message msg = Message.obtain();
                 msg.setData(mBundle);
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        msg.what = SAVEIMAGE;
-                        handler.sendMessage(msg);
-                    }
+                new Thread(() -> {
+                    msg.what = SAVEIMAGE;
+                    handler.sendMessage(msg);
                 }).start();
             }
         }, null);
@@ -813,11 +809,9 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 //        Log.d(TAG, "handleFaces");
 
         Face[] faces = result.get(CaptureResult.STATISTICS_FACES);
-        if (mFacesRect != null) {
-            mFacesRect.clear();
-        }
-        for (int i = 0; i < faces.length; ++i) {
-            Rect bounds = faces[i].getBounds();
+        mFacesRect.clear();
+        for (Face face : faces) {
+            Rect bounds = face.getBounds();
             int left = bounds.left;
             int right = bounds.right;
             int top = bounds.top;
@@ -848,15 +842,13 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     private class ImageSaver implements Runnable, Serializable {
-        private Context mContext;
         private Bitmap mBitmap;
         private byte[] mBytes;
-        private boolean flag = mirrorFlag;
+        private final boolean flag = mirrorFlag;
 
-        public ImageSaver(Context context, Bitmap bitmap, byte[] bytes) {
+        public ImageSaver(Bitmap bitmap, byte[] bytes) {
             Log.d(TAG, "ImageSaver");
             mBitmap = bitmap;
-            mContext = context;
             mBytes = bytes;
         }
 
@@ -872,6 +864,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             }
 
             //TODO AndroidQ之后 保存图片路径
+            @SuppressLint("SimpleDateFormat")
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
             Date date = new Date(System.currentTimeMillis());
             String sDate = format.format(date);
@@ -892,9 +885,9 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                         e.printStackTrace();
                     }
                 }
-                CameraUtil.broadcast(getActivity());
+                CameraUtil.broadcast(requireActivity());
                 imageList.add(path);
-                CameraUtil.setLastImagePath(imageList, mImageView);
+                CameraUtil.setLastImagePath(mImageView);
             }
         }
     }
@@ -904,12 +897,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         public void handleMessage(@NonNull Message msg) {
             super.handleMessage(msg);
             Bundle bundle;
-            switch (msg.what) {
-                case SAVEIMAGE:
-                    bundle = msg.getData();
-                    ImageSaver imageSaver = (ImageSaver) bundle.getSerializable("imageSaver");
-                    imageSaver.run();
-                    break;
+            if (msg.what == SAVEIMAGE) {
+                bundle = msg.getData();
+                ImageSaver imageSaver = (ImageSaver) bundle.getSerializable("imageSaver");
+                imageSaver.run();
             }
         }
     };
