@@ -5,7 +5,6 @@ import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -29,7 +28,6 @@ import android.hardware.camera2.params.Face;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -60,13 +58,12 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.example.camera2.util.CameraUtil;
 import com.example.camera2.view.AutoFitTextureView;
 import com.example.camera2.FaceDetectListener;
 import com.example.camera2.view.FaceView;
-import com.example.camera2.ImageShowActivity;
 import com.example.camera2.MainActivity;
 import com.example.camera2.R;
-import com.example.camera2.util.CameraUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -250,7 +247,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         deviceWidth = displayMetrics.widthPixels;
         deviceHeight = displayMetrics.heightPixels;
         faceView = view.findViewById(R.id.faceView);
-        mask = view.findViewById(R.id.mask);
+        mask = view.findViewById(R.id.photoMask);
     }
 
     public void initRatio() {
@@ -319,7 +316,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 changeCamera();
                 break;
             case R.id.imageView:
-                openAlbum();
+                CameraUtil.openAlbum(getContext());
                 break;
             case R.id.photoMode:
                 ((MainActivity) getActivity()).photoMode();
@@ -548,7 +545,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                     continue;
                 }
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
+                mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(ImageFormat.JPEG), width, height, deviceWidth, deviceHeight);
                 textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 textureView.setSurfaceTextureListener(textureListener);
                 mask.setLayoutParams(textureView.getLayoutParams());
@@ -739,9 +736,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         CaptureRequest mPreviewRequest = mPreviewRequestBuilder.build();
         try {
             mCaptureSession.setRepeatingRequest(mPreviewRequest, captureCallback, null);
-            Thread.sleep(450);
+            Thread.sleep(500);
             mask.setVisibility(View.GONE);
-            Log.d("~~~~~~~~~~~~~~", "GONE");
         } catch (CameraAccessException | InterruptedException e) {
             e.printStackTrace();
         }
@@ -851,18 +847,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         mFaceDetectListener.onFaceDetect(faces, mFacesRect);
     }
 
-    private void openAlbum() {
-        Log.d(TAG, "openAlbum");
-
-        imageList = CameraUtil.getFilePath();
-        if (!imageList.isEmpty()) {
-            Intent intent = new Intent();
-            intent.setClass(getContext(), ImageShowActivity.class);
-            startActivity(intent);
-            closeCamera();
-        }
-    }
-
     private class ImageSaver implements Runnable, Serializable {
         private Context mContext;
         private Bitmap mBitmap;
@@ -908,7 +892,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                         e.printStackTrace();
                     }
                 }
-                broadcast();
+                CameraUtil.broadcast(getActivity());
                 imageList.add(path);
                 CameraUtil.setLastImagePath(imageList, mImageView);
             }
@@ -929,14 +913,4 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             }
         }
     };
-
-    private void broadcast() {
-        Log.d(TAG, "broadcast");
-
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/";
-        Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-        Uri uri = Uri.fromFile(new File(path));
-        intent.setData(uri);
-        getActivity().sendBroadcast(intent);
-    }
 }

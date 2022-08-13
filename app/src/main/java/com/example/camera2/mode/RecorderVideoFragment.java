@@ -3,8 +3,8 @@ package com.example.camera2.mode;
 import android.Manifest;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
@@ -20,14 +20,12 @@ import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.MediaRecorder;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -48,10 +46,10 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
-import com.example.camera2.ImageShowActivity;
 import com.example.camera2.MainActivity;
 import com.example.camera2.R;
 import com.example.camera2.util.CameraUtil;
+import com.example.camera2.view.AutoFitTextureView;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,19 +58,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Objects;
 
 public class RecorderVideoFragment extends Fragment implements View.OnClickListener {
     private static final String TAG = "RecorderVideoFragment";
 
-    private TextureView textureView;
+    private AutoFitTextureView textureView;
     private ImageButton recording;
     private ImageView mImageView;
     private ImageButton change;
     private Chronometer timer;
     private LinearLayout timerBg;
-    private ImageButton photoMode;
-    private ImageButton recordingMode;
     private TextView videoQuality;
+    private String quality = "480P";
     private CaptureRequest.Builder mPreviewCaptureRequestBuilder;
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
@@ -86,13 +84,15 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
     private String mCameraId;
     private CameraDevice mCameraDevice;
+    private Size mPreviewSize;
     private CameraCaptureSession mCameraCaptureSession;
     private HandlerThread mHandlerThread;
     private Handler mChildHandler;
     private boolean isRecording = false;
     private MediaRecorder mMediaRecorder;
     private CameraManager mCameraManager;
-    private ArrayList<String> imageList = new ArrayList<>();
+    private final ArrayList<String> imageList = new ArrayList<>();
+    private ImageView mask;
 
     @Nullable
     @Override
@@ -104,10 +104,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
         initView(view);
 
-        recording.setOnClickListener(this);
-        mImageView.setOnClickListener(this);
-        change.setOnClickListener(this);
-
         return view;
     }
 
@@ -117,7 +113,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
         super.onResume();
         CameraUtil.setLastImagePath(imageList, mImageView);
-        initChildHandler();
         if (textureView.isAvailable()) {
             setUpCamera();
             openCamera();
@@ -134,6 +129,29 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         closeCamera();
     }
 
+    private void initView(View view) {
+        Log.d(TAG, "initView");
+
+        textureView = view.findViewById(R.id.mTextureView);
+        recording = view.findViewById(R.id.recordingBtn);
+        mImageView = view.findViewById(R.id.mImageView);
+        change = view.findViewById(R.id.mChange);
+        timer = view.findViewById(R.id.timer);
+        timerBg = view.findViewById(R.id.timerBg);
+        ImageButton photoMode = view.findViewById(R.id.mPhotoMode);
+        ImageButton recordingMode = view.findViewById(R.id.mRecordingMode);
+        videoQuality = view.findViewById(R.id.videoQuality);
+        mask = view.findViewById(R.id.videoMask);
+
+        recording.setOnClickListener(this);
+        mImageView.setOnClickListener(this);
+        change.setOnClickListener(this);
+        photoMode.setOnClickListener(this);
+        recordingMode.setOnClickListener(this);
+        videoQuality.setOnClickListener(this);
+    }
+
+    @SuppressLint("NonConstantResourceId")
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void onClick(View view) {
@@ -151,43 +169,53 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 }
                 break;
             case R.id.mImageView:
-                openAlbum();
+                CameraUtil.openAlbum(getContext());
                 break;
             case R.id.mChange:
                 changeCamera();
                 break;
+            case R.id.photoMode:
+                ((MainActivity)getActivity()).photoMode();
+                break;
+            case R.id.recordingMode:
+                ((MainActivity)getActivity()).videoMode();
+                break;
+            case R.id.videoQuality:
+                if (videoQuality.getText() == getString(R.string.quality480)) {
+                    quality = getString(R.string.quality720);
+                    videoQuality.setText(quality);
+                    mask.setVisibility(View.VISIBLE);
+                    closeCamera();
+                    setUpCamera();
+                    openCamera();
+                } else {
+                    quality = getString(R.string.quality480);
+                    videoQuality.setText(quality);
+                    mask.setVisibility(View.VISIBLE);
+                    closeCamera();
+                    setUpCamera();
+                    openCamera();
+                }
+                break;
         }
     }
 
-    private void initView(View view) {
-        Log.d(TAG, "initView");
+    private void initChildHandler() {
+        mHandlerThread = new HandlerThread("HandlerThread");
+        mHandlerThread.start();
+        mChildHandler = new Handler(mHandlerThread.getLooper());
+    }
 
-        textureView = view.findViewById(R.id.mTextureView);
-        recording = view.findViewById(R.id.recordingBtn);
-        mImageView = view.findViewById(R.id.mImageView);
-        change = view.findViewById(R.id.mChange);
-        timer = view.findViewById(R.id.timer);
-        timerBg = view.findViewById(R.id.timerBg);
-
-        photoMode = view.findViewById(R.id.mPhotoMode);
-        recordingMode = view.findViewById(R.id.mRecordingMode);
-        photoMode.setOnClickListener(v -> {
-            ((MainActivity)getActivity()).photoMode();
-        });
-        recordingMode.setOnClickListener(v -> {
-            ((MainActivity)getActivity()).videoMode();
-        });
-
-        videoQuality = view.findViewById(R.id.videoQuality);
-        videoQuality.setOnClickListener(v -> {
-            if (videoQuality.getText() == "480P") {
-                videoQuality.setText("720P");
-
-            } else {
-                videoQuality.setText("480P");
-
+    public void stopBackgroudThread() {
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+            try {
+                mHandlerThread.join();
+                mHandlerThread = null;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        });
+        }
     }
 
     private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
@@ -226,6 +254,11 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 if (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
                     continue;
                 }
+                StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
+                mPreviewSize = getMatchingSize(sizes, quality);
+                textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
+                mask.setLayoutParams(textureView.getLayoutParams());
                 mCameraId = cameraId;
                 break;
             }
@@ -237,6 +270,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private void openCamera() {
         Log.d(TAG, "openCamera");
 
+        initChildHandler();
         try {
             if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 return;
@@ -258,12 +292,10 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             mMediaRecorder.release();
             mMediaRecorder = null;
         }
-        if (mHandlerThread != null) {
-            stopBackgroudThread();
-        }
+        stopBackgroudThread();
     }
 
-    private CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
+    private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
             Log.d(TAG, "CameraDevice.StateCallback： onOpened");
@@ -283,79 +315,45 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         }
     };
 
-    private void initChildHandler() {
-        mHandlerThread = new HandlerThread("HandlerThread");
-        mHandlerThread.start();
-        mChildHandler = new Handler(mHandlerThread.getLooper());
-    }
-
-    public void stopBackgroudThread() {
-        if (mHandlerThread != null) {
-            mHandlerThread.quitSafely();
-            try {
-                mHandlerThread.join();
-                mHandlerThread = null;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     private void startPreview() {
         Log.d(TAG, "startPreview");
 
         SurfaceTexture mSurfaceTexture = textureView.getSurfaceTexture();
-        Size cameraSize = getMatchingSize();
-        mSurfaceTexture.setDefaultBufferSize(cameraSize.getWidth(), cameraSize.getHeight());
+        mSurfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         Surface previewSurface = new Surface(mSurfaceTexture);
         try {
             mPreviewCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewCaptureRequestBuilder.addTarget(previewSurface);
             mCameraDevice.createCaptureSession(Collections.singletonList(previewSurface), sessionStateCallback, mChildHandler);
-        } catch (CameraAccessException e) {
+            Thread.sleep(450);
+            mask.setVisibility(View.GONE);
+        } catch (CameraAccessException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private Size getMatchingSize() {
+    private Size getMatchingSize(Size[] sizes, String quality) {
         Size selectSize = null;
-        try {
-            CameraCharacteristics cameraCharacteristics = mCameraManager.getCameraCharacteristics(mCameraId);
-            StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
-            DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
-            int deviceWidth = displayMetrics.widthPixels;
-            int deviceHeight = displayMetrics.heightPixels;
-            for (int j = 0; j < 40; ++j) {
-                for (int i = 0; i < sizes.length; ++i) {
-                    Size itemSize = sizes[i];
-                    //摄像头分辨率的高度对应屏幕的宽度
-                    if (itemSize.getHeight() < (deviceWidth + j * 5) && itemSize.getHeight() > (deviceWidth - j * 5)) {
-                        if (selectSize != null) {
-                            if (Math.abs(deviceHeight - itemSize.getWidth()) < Math.abs(deviceHeight - selectSize.getWidth())) {
-                                selectSize = itemSize;
-                                continue;
-                            }
-                        } else {
-                            selectSize = itemSize;
-                        }
-                    }
+        for (Size itemSize: sizes) {
+            if (Objects.equals(quality, getString(R.string.quality480))) {
+                if ((itemSize.getWidth() == 640 && itemSize.getHeight() == 480) ||
+                        (itemSize.getWidth() == 720 && itemSize.getHeight() == 480)) {
+                    selectSize = itemSize;
                 }
-                if (selectSize != null) {
-                    break;
+            } else {
+                if ((itemSize.getWidth() == 1280 && itemSize.getHeight() == 720)) {
+                    selectSize = itemSize;
                 }
             }
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
         }
 
-        Log.d(TAG, "getMatchingSize: 选择的分辨率宽度 = " +selectSize.getWidth());
-        Log.d(TAG, "getMatchingSize: 选择的分辨率高度 = " +selectSize.getHeight());
+        Log.d(TAG, "getMatchingSize: 选择的分辨率宽度 = " + selectSize.getHeight());
+        Log.d(TAG, "getMatchingSize: 选择的分辨率高度 = " + selectSize.getWidth());
 
         return selectSize;
     }
 
-    private CameraCaptureSession.StateCallback sessionStateCallback = new CameraCaptureSession.StateCallback() {
+    private final CameraCaptureSession.StateCallback sessionStateCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
             Log.d(TAG, "sessionStateCallback onConfigured");
@@ -391,6 +389,23 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         }
     }
 
+    private void changeCamera() {
+        Log.d(TAG, "changeCamera");
+
+        ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, 180f);
+        anim.setDuration(300);
+        anim.start();
+        if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
+            Log.d(TAG, "前置转后置");
+            mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_FRONT);
+        } else {
+            Log.d(TAG, "后置转前置");
+            mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_BACK);
+        }
+        closeCamera();
+        openCamera();
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void configSession() {
         try {
@@ -403,9 +418,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             e.printStackTrace();
         }
         configMediaRecorder();
-        Size cameraSize = getMatchingSize();
         SurfaceTexture surfaceTexture = textureView.getSurfaceTexture();
-        surfaceTexture.setDefaultBufferSize(cameraSize.getWidth(), cameraSize.getHeight());
+        surfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         Surface previewSurface = new Surface(surfaceTexture);
         Surface recorderSurface = mMediaRecorder.getSurface();
         try {
@@ -421,6 +435,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void configMediaRecorder() {
+        @SuppressLint("SimpleDateFormat")
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
         Date date = new Date(System.currentTimeMillis());
         File file = new File(Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera/myVideo" + format.format(date) + ".mp4");
@@ -435,8 +450,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        Size size = getMatchingSize();
-        mMediaRecorder.setVideoSize(size.getWidth(), size.getHeight());
+        mMediaRecorder.setVideoSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         mMediaRecorder.setVideoFrameRate(30);
         mMediaRecorder.setOutputFile(file.getAbsoluteFile());
         mMediaRecorder.setVideoEncodingBitRate(8 * 1024 * 1920);
@@ -453,7 +467,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         }
     }
 
-    private CameraCaptureSession.StateCallback mSessionStateCallback = new CameraCaptureSession.StateCallback() {
+    private final CameraCaptureSession.StateCallback mSessionStateCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession session) {
             Log.d(TAG, "mSessionStateCallback onConfigured");
@@ -473,7 +487,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         }
     };
 
-    private CameraCaptureSession.CaptureCallback mSessionCaptureCallback = new CameraCaptureSession.CaptureCallback() {
+    private final CameraCaptureSession.CaptureCallback mSessionCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         @Override
         public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
             Log.d(TAG, "onCaptureStarted");
@@ -522,7 +536,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             mMediaRecorder.reset();
             endTime();
         }
-        broadcast();
+        CameraUtil.broadcast(getActivity());
         CameraUtil.setLastImagePath(imageList, mImageView);
         startPreview();
     }
@@ -537,44 +551,5 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         timer.stop();
         timerBg.setVisibility(View.GONE);
         timer.setBase(SystemClock.elapsedRealtime());
-    }
-
-    private void broadcast() {
-        Log.d(TAG, "broadcast");
-
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/";
-        Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-        Uri uri = Uri.fromFile(new File(path));
-        intent.setData(uri);
-        getActivity().sendBroadcast(intent);
-    }
-
-    private void openAlbum() {
-        Log.d(TAG, "openAlbum");
-
-        ArrayList<String> imgList = new ArrayList<>();
-        imageList = CameraUtil.getFilePath();
-        if (!imageList.isEmpty()) {
-            Intent intent = new Intent();
-            intent.setClass(getContext(), ImageShowActivity.class);
-            startActivity(intent);
-        }
-    }
-
-    private void changeCamera() {
-        Log.d(TAG, "changeCamera");
-
-        ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, 180f);
-        anim.setDuration(300);
-        anim.start();
-        if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
-            Log.d(TAG, "前置转后置");
-            mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_FRONT);
-        } else {
-            Log.d(TAG, "后置转前置");
-            mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_BACK);
-        }
-        mCameraDevice.close();
-        openCamera();
     }
 }

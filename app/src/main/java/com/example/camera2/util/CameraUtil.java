@@ -1,16 +1,16 @@
 package com.example.camera2.util;
 
-import android.Manifest;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.app.Activity;
-import android.content.pm.PackageManager;
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.media.MediaMetadataRetriever;
-import android.os.Build;
+import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 import android.util.Size;
@@ -18,9 +18,7 @@ import android.view.Surface;
 import android.view.View;
 import android.widget.ImageView;
 
-import androidx.core.content.ContextCompat;
-
-import com.example.camera2.MainActivity;
+import com.example.camera2.ImageShowActivity;
 import com.example.camera2.R;
 
 import java.io.File;
@@ -60,8 +58,7 @@ public class CameraUtil {
             return result;
         } else {
             for (int j = 1; j < 41; ++j) {
-                for (int i = 0; i < sizeMap.length; ++i) {
-                    Size itemSize = sizeMap[i];
+                for (Size itemSize : sizeMap) {
                     if (itemSize.getHeight() < (deviceWidth + j * 5) && itemSize.getHeight() > (deviceWidth - j * 5)) {
                         if (result != null) {
                             if (Math.abs(deviceHeight - itemSize.getWidth()) < Math.abs(deviceHeight - result.getWidth())) {
@@ -131,6 +128,27 @@ public class CameraUtil {
 //                bitmap = null;
 //            }
         }
+    }
+
+    public static void openAlbum(Context context) {
+        Log.d(TAG, "openAlbum");
+
+        ArrayList<String> imageList = CameraUtil.getFilePath();
+        if (!imageList.isEmpty()) {
+            Intent intent = new Intent();
+            intent.setClass(context, ImageShowActivity.class);
+            context.startActivity(intent);
+        }
+    }
+
+    public static void broadcast(Activity activity) {
+        Log.d(TAG, "broadcast");
+
+        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/";
+        Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        Uri uri = Uri.fromFile(new File(path));
+        intent.setData(uri);
+        activity.sendBroadcast(intent);
     }
 
     public static Matrix configureTransform(Activity activity, int width, int height, Size previewSize) {
