@@ -29,7 +29,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="30dp"
+            android:layout_marginBottom="20dp"
             android:gravity="center"
             android:orientation="horizontal"
             android:padding="5dp">
@@ -55,6 +55,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:clickable="true"
+            android:padding="8dp"
             android:text="@string/quality480"
             android:textColor="#ffff8811"
             android:textSize="18sp" />
@@ -69,7 +70,7 @@
         android:layout_marginTop="150dp"
         android:background="#00000000"
         android:gravity="center"
-        android:padding="10dp"
+        android:padding="15dp"
         android:visibility="gone">
 
         <ImageView

@@ -7,6 +7,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -30,6 +31,7 @@ import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
+import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -61,6 +63,7 @@ import java.util.Date;
 public class RecorderVideoFragment extends Fragment implements View.OnClickListener {
     private static final String TAG = "RecorderVideoFragment";
 
+    private View view;
     private AutoFitTextureView textureView;
     private ImageButton recording;
     private ImageView mImageView;
@@ -73,13 +76,18 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private String quality = "480P";
     private CaptureRequest.Builder mPreviewCaptureRequestBuilder;
 
-    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
-
+    private static final SparseIntArray FRONT_ORIENTATIONS = new SparseIntArray();
+    private static final SparseIntArray BACK_ORIENTATIONS = new SparseIntArray();
     static {
-        ORIENTATIONS.append(Surface.ROTATION_0, 90);
-        ORIENTATIONS.append(Surface.ROTATION_90, 0);
-        ORIENTATIONS.append(Surface.ROTATION_180, 270);
-        ORIENTATIONS.append(Surface.ROTATION_270, 180);
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_0, 270);
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_90, 0);
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_180, 90);
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_270, 180);
+
+        BACK_ORIENTATIONS.append(Surface.ROTATION_0, 90);
+        BACK_ORIENTATIONS.append(Surface.ROTATION_90, 0);
+        BACK_ORIENTATIONS.append(Surface.ROTATION_180, 270);
+        BACK_ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
     private String mCameraId = "";
@@ -92,6 +100,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private MediaRecorder mMediaRecorder;
     private CameraManager mCameraManager;
     private ImageView mask;
+    private int rotation = 0;
 
     @Nullable
     @Override
@@ -99,7 +108,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         super.onCreateView(inflater, container, savedInstanceState);
         Log.d(TAG, "onCreateView");
 
-        View view = inflater.inflate(R.layout.fragment_recorder, container, false);
+        view = inflater.inflate(R.layout.fragment_recorder, container, false);
 
         initView(view);
 
@@ -183,11 +192,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             case R.id.mChange:
                 changeCamera();
                 break;
-            case R.id.photoMode:
+            case R.id.mPhotoMode:
                 ((MainActivity) requireActivity()).photoMode();
-                break;
-            case R.id.recordingMode:
-                ((MainActivity) requireActivity()).videoMode();
                 break;
             case R.id.videoQuality:
                 if (videoQuality.getText() == getString(R.string.quality480)) {
@@ -234,6 +240,37 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         @Override
         public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
             Log.d(TAG, "onSurfaceTextureSizeChanged");
+            Matrix matrix = CameraUtil.configureTransform(requireActivity(), textureView.getWidth(), textureView.getHeight(), mPreviewSize);
+            textureView.setTransform(matrix);
+
+            OrientationEventListener orientationEventListener = new OrientationEventListener(getContext()) {
+                @Override
+                public void onOrientationChanged(int orientation) {
+//                    Log.d(TAG, "onOrientationChanged");
+                    if (orientation == OrientationEventListener.ORIENTATION_UNKNOWN) {
+                        return;
+                    }
+                    int tempRotation = rotation;
+                    if (orientation > 315 || orientation < 45) {
+                        rotation = 0;
+                    } else if (orientation > 225 && orientation < 315) {
+                        rotation = 1;
+                    } else if (orientation > 135 && orientation < 225) {
+                        rotation = 2;
+                    } else if (orientation > 45 && orientation < 135) {
+                        rotation = 3;
+                    }
+                    if (rotation != tempRotation) {
+                        rotationAnim();
+                    }
+                }
+            };
+            if (orientationEventListener.canDetectOrientation()) {
+                orientationEventListener.enable();
+            } else {
+                orientationEventListener.disable();
+                Log.e(TAG, "当前设备不支持手机旋转！");
+            }
         }
 
         @Override
@@ -286,6 +323,14 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 return;
             } else {
+                int rotation = requireActivity().getWindowManager().getDefaultDisplay().getOrientation();
+                if (rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180) {
+                    textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
+                } else {
+                    textureView.setAspectRation(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+                }
+                Matrix matrix = CameraUtil.configureTransform(requireActivity(), textureView.getWidth(), textureView.getHeight(), mPreviewSize);
+                textureView.setTransform(matrix);
                 mCameraManager.openCamera(mCameraId, stateCallback, null);
             }
         } catch (CameraAccessException e) {
@@ -462,9 +507,9 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         mMediaRecorder.setVideoFrameRate(30);
         mMediaRecorder.setOutputFile(file.getAbsoluteFile());
         mMediaRecorder.setVideoEncodingBitRate(8 * 1024 * 1920);
-        mMediaRecorder.setOrientationHint(90);
+        mMediaRecorder.setOrientationHint(BACK_ORIENTATIONS.get(rotation));
         if (mCameraId.equals("1")) {
-            mMediaRecorder.setOrientationHint(270);
+            mMediaRecorder.setOrientationHint(FRONT_ORIENTATIONS.get(rotation));
         }
         Surface surface = new Surface(textureView.getSurfaceTexture());
         mMediaRecorder.setPreviewDisplay(surface);
@@ -559,5 +604,30 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         timer.stop();
         timerBg.setVisibility(View.GONE);
         timer.setBase(SystemClock.elapsedRealtime());
+    }
+
+    private void rotationAnim() {
+        float toValue = 0;
+        if (rotation == 0) {
+            toValue = 0;
+        } else if (rotation == 1) {
+            toValue = 90;
+        } else if (rotation == 2) {
+            toValue = 180;
+        } else if (rotation == 3) {
+            toValue = -90;
+        }
+        ObjectAnimator changeAnim = ObjectAnimator.ofFloat(change, "rotation", 0f, toValue);
+        ObjectAnimator previewAnim = ObjectAnimator.ofFloat(mImageView, "rotation", 0f, toValue);
+        ObjectAnimator buttonAnim = ObjectAnimator.ofFloat(recording, "rotation", 0f, toValue);
+        ObjectAnimator ratioAnim = ObjectAnimator.ofFloat(videoQuality, "rotation", 0f, toValue);
+        ObjectAnimator photoAnim = ObjectAnimator.ofFloat(photoMode, "rotation", 0f, toValue);
+        ObjectAnimator videoAnim = ObjectAnimator.ofFloat(recordingMode, "rotation", 0f, toValue);
+        ObjectAnimator timerAnim = ObjectAnimator.ofFloat(timerBg, "rotation", 0f, toValue);
+        AnimatorSet set = new AnimatorSet();
+        set.play(changeAnim).with(previewAnim).with(buttonAnim).with(ratioAnim).with(photoAnim)
+                .with(videoAnim).with(timerAnim);
+        set.setDuration(300);
+        set.start();
     }
 }

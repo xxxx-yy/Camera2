@@ -176,38 +176,4 @@ public class CameraUtil {
         }
         return matrix;
     }
-
-    public static void rotationAnim(View view, int rotation) {
-        float toValue = 0;
-        if (rotation == 0) {
-            toValue = 0;
-        } else if (rotation == 1) {
-            toValue = 90;
-        } else if (rotation == 2) {
-            toValue = 180;
-        } else if (rotation == 3) {
-            toValue = -90;
-        }
-        ObjectAnimator changeAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.change), "rotation", 0f, toValue);
-        ObjectAnimator previewAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.imageView), "rotation", 0f, toValue);
-        ObjectAnimator buttonAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.takePhotoBtn), "rotation", 0f, toValue);
-        ObjectAnimator ratioAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.ratio_selected), "rotation", 0f, toValue);
-        ObjectAnimator ratio1_1Anim = ObjectAnimator.ofFloat(view.findViewById(R.id.ratio_1_1), "rotation", 0f, toValue);
-        ObjectAnimator ratio4_3Anim = ObjectAnimator.ofFloat(view.findViewById(R.id.ratio_4_3), "rotation", 0f, toValue);
-        ObjectAnimator ratioFullAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.ratio_full), "rotation", 0f, toValue);
-        ObjectAnimator delayAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.delay), "rotation", 0f, toValue);
-        ObjectAnimator delayOffAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.noDelay), "rotation", 0f, toValue);
-//        ObjectAnimator delay3Anim = ObjectAnimator.ofFloat(LayoutInflater.from(activity).inflate(R.layout.select_delay_time, null).findViewById(R.id.delay3), "rotation", 0f, toValue);
-        ObjectAnimator delay5Anim = ObjectAnimator.ofFloat(view.findViewById(R.id.delay5), "rotation", 0f, toValue);
-        ObjectAnimator delay10Anim = ObjectAnimator.ofFloat(view.findViewById(R.id.delay10), "rotation", 0f, toValue);
-        ObjectAnimator photoAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.photoMode), "rotation", 0f, toValue);
-        ObjectAnimator videoAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.recordingMode), "rotation", 0f, toValue);
-        ObjectAnimator mirrorAnim = ObjectAnimator.ofFloat(view.findViewById(R.id.mirror), "rotation", 0f, toValue);
-        AnimatorSet set = new AnimatorSet();
-        set.play(changeAnim).with(previewAnim).with(buttonAnim).with(ratioAnim).with(ratio1_1Anim)
-                .with(ratio4_3Anim).with(ratioFullAnim).with(delayAnim).with(delayOffAnim)
-                .with(delay5Anim).with(delay10Anim).with(photoAnim).with(videoAnim).with(mirrorAnim);
-        set.setDuration(300);
-        set.start();
-    }
 }

@@ -316,9 +316,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             case R.id.imageView:
                 CameraUtil.openAlbum(getContext());
                 break;
-            case R.id.photoMode:
-                ((MainActivity) requireActivity()).photoMode();
-                break;
             case R.id.recordingMode:
                 ((MainActivity) requireActivity()).videoMode();
                 break;
@@ -523,7 +520,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                         rotation = 3;
                     }
                     if (rotation != tempRotation) {
-                        CameraUtil.rotationAnim(view, rotation);
+                        rotationAnim();
                     }
                 }
             };
@@ -923,4 +920,31 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             }
         }
     };
+
+    private void rotationAnim() {
+        float toValue = 0;
+        if (rotation == 0) {
+            toValue = 0;
+        } else if (rotation == 1) {
+            toValue = 90;
+        } else if (rotation == 2) {
+            toValue = 180;
+        } else if (rotation == 3) {
+            toValue = -90;
+        }
+        ObjectAnimator changeAnim = ObjectAnimator.ofFloat(changeBtn, "rotation", 0f, toValue);
+        ObjectAnimator previewAnim = ObjectAnimator.ofFloat(mImageView, "rotation", 0f, toValue);
+        ObjectAnimator buttonAnim = ObjectAnimator.ofFloat(takePictureBtn, "rotation", 0f, toValue);
+        ObjectAnimator ratioAnim = ObjectAnimator.ofFloat(ratioSelected, "rotation", 0f, toValue);
+        ObjectAnimator delayAnim = ObjectAnimator.ofFloat(delayBtn, "rotation", 0f, toValue);
+        ObjectAnimator photoAnim = ObjectAnimator.ofFloat(photoMode, "rotation", 0f, toValue);
+        ObjectAnimator videoAnim = ObjectAnimator.ofFloat(recordingMode, "rotation", 0f, toValue);
+        ObjectAnimator mirrorAnim = ObjectAnimator.ofFloat(mirror, "rotation", 0f, toValue);
+        ObjectAnimator countdownTime = ObjectAnimator.ofFloat(countdown, "rotation", 0f, toValue);
+        AnimatorSet set = new AnimatorSet();
+        set.play(changeAnim).with(previewAnim).with(buttonAnim).with(ratioAnim).with(delayAnim)
+                .with(photoAnim).with(videoAnim).with(mirrorAnim).with(countdownTime);
+        set.setDuration(300);
+        set.start();
+    }
 }
