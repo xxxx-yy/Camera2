@@ -1,7 +1,5 @@
 package com.example.camera2.util;
 
-import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -14,8 +12,8 @@ import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 import android.util.Size;
+import android.util.SparseIntArray;
 import android.view.Surface;
-import android.view.View;
 import android.widget.ImageView;
 
 import com.example.camera2.ImageShowActivity;
@@ -28,6 +26,20 @@ import java.util.List;
 public class CameraUtil {
 
     private static final String TAG = "CameraUtil";
+
+    public static final SparseIntArray FRONT_ORIENTATIONS = new SparseIntArray();
+    public static final SparseIntArray BACK_ORIENTATIONS = new SparseIntArray();
+    static {
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_0, 270);
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_90, 0);
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_180, 90);
+        FRONT_ORIENTATIONS.append(Surface.ROTATION_270, 180);
+
+        BACK_ORIENTATIONS.append(Surface.ROTATION_0, 90);
+        BACK_ORIENTATIONS.append(Surface.ROTATION_90, 0);
+        BACK_ORIENTATIONS.append(Surface.ROTATION_180, 270);
+        BACK_ORIENTATIONS.append(Surface.ROTATION_270, 180);
+    }
 
     //获取最佳预览尺寸
     public static Size getOptimalSize(Size[] sizeMap, int width, int height, int deviceWidth, int deviceHeight) {

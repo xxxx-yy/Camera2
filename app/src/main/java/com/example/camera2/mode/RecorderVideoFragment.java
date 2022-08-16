@@ -29,7 +29,6 @@ import android.os.HandlerThread;
 import android.os.SystemClock;
 import android.util.Log;
 import android.util.Size;
-import android.util.SparseIntArray;
 import android.view.LayoutInflater;
 import android.view.OrientationEventListener;
 import android.view.Surface;
@@ -63,7 +62,6 @@ import java.util.Date;
 public class RecorderVideoFragment extends Fragment implements View.OnClickListener {
     private static final String TAG = "RecorderVideoFragment";
 
-    private View view;
     private AutoFitTextureView textureView;
     private ImageButton recording;
     private ImageView mImageView;
@@ -75,20 +73,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private TextView videoQuality;
     private String quality = "480P";
     private CaptureRequest.Builder mPreviewCaptureRequestBuilder;
-
-    private static final SparseIntArray FRONT_ORIENTATIONS = new SparseIntArray();
-    private static final SparseIntArray BACK_ORIENTATIONS = new SparseIntArray();
-    static {
-        FRONT_ORIENTATIONS.append(Surface.ROTATION_0, 270);
-        FRONT_ORIENTATIONS.append(Surface.ROTATION_90, 0);
-        FRONT_ORIENTATIONS.append(Surface.ROTATION_180, 90);
-        FRONT_ORIENTATIONS.append(Surface.ROTATION_270, 180);
-
-        BACK_ORIENTATIONS.append(Surface.ROTATION_0, 90);
-        BACK_ORIENTATIONS.append(Surface.ROTATION_90, 0);
-        BACK_ORIENTATIONS.append(Surface.ROTATION_180, 270);
-        BACK_ORIENTATIONS.append(Surface.ROTATION_270, 180);
-    }
 
     private String mCameraId = "";
     private CameraDevice mCameraDevice;
@@ -108,7 +92,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         super.onCreateView(inflater, container, savedInstanceState);
         Log.d(TAG, "onCreateView");
 
-        view = inflater.inflate(R.layout.fragment_recorder, container, false);
+        View view = inflater.inflate(R.layout.fragment_recorder, container, false);
 
         initView(view);
 
@@ -120,6 +104,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Log.d(TAG, "onResume");
 
         super.onResume();
+        initRecording();
         CameraUtil.setLastImagePath(mImageView);
         if (textureView.isAvailable()) {
             setUpCamera();
@@ -134,6 +119,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Log.d(TAG, "onPause");
 
         super.onPause();
+        stopRecorder();
         closeCamera();
     }
 
@@ -166,24 +152,10 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         switch (view.getId()) {
             case R.id.recordingBtn:
                 if (isRecording) {
-                    recording.setImageResource(R.drawable.recording);
+                    initRecording();
                     stopRecorder();
-                    isRecording = false;
-                    photoMode.setVisibility(View.VISIBLE);
-                    recordingMode.setVisibility(View.VISIBLE);
-                    videoQuality.setVisibility(View.VISIBLE);
-                    mImageView.setVisibility(View.VISIBLE);
-                    change.setVisibility(View.VISIBLE);
                 } else {
-                    photoMode.setVisibility(View.GONE);
-                    recordingMode.setVisibility(View.GONE);
-                    videoQuality.setVisibility(View.GONE);
-                    mImageView.setVisibility(View.GONE);
-                    change.setVisibility(View.GONE);
-                    isRecording = true;
-                    recording.setImageResource(R.drawable.stop_recording);
-                    configSession();
-                    startRecorder();
+                    noRecording();
                 }
                 break;
             case R.id.mImageView:
@@ -196,7 +168,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 ((MainActivity) requireActivity()).photoMode();
                 break;
             case R.id.videoQuality:
-                if (videoQuality.getText() == getString(R.string.quality480)) {
+                if (videoQuality.getText().equals(getString(R.string.quality480))) {
                     quality = getString(R.string.quality720);
                 } else {
                     quality = getString(R.string.quality480);
@@ -208,6 +180,31 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 openCamera();
                 break;
         }
+    }
+
+    private void initRecording(){
+        recording.setImageResource(R.drawable.recording);
+        isRecording = false;
+        photoMode.setVisibility(View.VISIBLE);
+        recordingMode.setVisibility(View.VISIBLE);
+        videoQuality.setVisibility(View.VISIBLE);
+        mImageView.setVisibility(View.VISIBLE);
+        change.setVisibility(View.VISIBLE);
+        MainActivity.touchEnabled = true;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void noRecording() {
+        MainActivity.touchEnabled = false;
+        photoMode.setVisibility(View.GONE);
+        recordingMode.setVisibility(View.GONE);
+        videoQuality.setVisibility(View.GONE);
+        mImageView.setVisibility(View.GONE);
+        change.setVisibility(View.GONE);
+        isRecording = true;
+        recording.setImageResource(R.drawable.stop_recording);
+        configSession();
+        startRecorder();
     }
 
     private void initChildHandler() {
@@ -449,7 +446,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Log.d(TAG, "changeCamera");
 
         ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, 180f);
-        anim.setDuration(300);
+        anim.setDuration(1000);
         anim.start();
         if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
             Log.d(TAG, "前置转后置");
@@ -507,9 +504,9 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         mMediaRecorder.setVideoFrameRate(30);
         mMediaRecorder.setOutputFile(file.getAbsoluteFile());
         mMediaRecorder.setVideoEncodingBitRate(8 * 1024 * 1920);
-        mMediaRecorder.setOrientationHint(BACK_ORIENTATIONS.get(rotation));
+        mMediaRecorder.setOrientationHint(CameraUtil.BACK_ORIENTATIONS.get(rotation));
         if (mCameraId.equals("1")) {
-            mMediaRecorder.setOrientationHint(FRONT_ORIENTATIONS.get(rotation));
+            mMediaRecorder.setOrientationHint(CameraUtil.FRONT_ORIENTATIONS.get(rotation));
         }
         Surface surface = new Surface(textureView.getSurfaceTexture());
         mMediaRecorder.setPreviewDisplay(surface);
@@ -587,8 +584,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         if (mMediaRecorder != null) {
             mMediaRecorder.stop();
             mMediaRecorder.reset();
-            endTime();
         }
+        endTime();
         CameraUtil.broadcast(requireActivity());
         CameraUtil.setLastImagePath(mImageView);
         startPreview();

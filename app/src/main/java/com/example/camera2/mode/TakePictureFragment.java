@@ -33,12 +33,10 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.Message;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
-import android.util.SparseIntArray;
 import android.view.LayoutInflater;
 import android.view.OrientationEventListener;
 import android.view.Surface;
@@ -86,20 +84,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             Manifest.permission.RECORD_AUDIO};
     private final List<String> permissionList = new ArrayList();
 
-    private static final SparseIntArray FRONT_ORIENTATIONS = new SparseIntArray();
-    private static final SparseIntArray BACK_ORIENTATIONS = new SparseIntArray();
-    static {
-        FRONT_ORIENTATIONS.append(Surface.ROTATION_0, 270);
-        FRONT_ORIENTATIONS.append(Surface.ROTATION_90, 0);
-        FRONT_ORIENTATIONS.append(Surface.ROTATION_180, 90);
-        FRONT_ORIENTATIONS.append(Surface.ROTATION_270, 180);
-
-        BACK_ORIENTATIONS.append(Surface.ROTATION_0, 90);
-        BACK_ORIENTATIONS.append(Surface.ROTATION_90, 0);
-        BACK_ORIENTATIONS.append(Surface.ROTATION_180, 270);
-        BACK_ORIENTATIONS.append(Surface.ROTATION_270, 180);
-    }
-
     private View view;
     private AutoFitTextureView textureView;
     private ImageButton takePictureBtn;
@@ -124,6 +108,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private int delayState = 0;
     private long delayTime = 0;
     private TextView countdown;
+    private CountDownTimer countDownTimer;
+    private Animation animation;
     private ImageButton mirror;
     private boolean mirrorFlag = true;
     private ImageView mImageView;
@@ -188,6 +174,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         Log.d(TAG, "onPause");
 
         super.onPause();
+        if (countDownTimer != null) {
+            countDownTimer.cancel();
+            countdownEnd();
+        }
         closeCamera();
     }
 
@@ -251,7 +241,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     @SuppressLint("InflateParams")
-    public void initRatio() {
+    private void initRatio() {
         ratioSelected = view.findViewById(R.id.ratio_selected);
         ratio = new PopupWindow();
         ratio.setWidth(ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -268,7 +258,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     @SuppressLint("InflateParams")
-    public void initDelayTime() {
+    private void initDelayTime() {
         delayBtn = view.findViewById(R.id.delay);
         delayTimeWindow = new PopupWindow();
         delayTimeWindow.setWidth(ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -285,7 +275,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         delay10 = delayTimeWindow.getContentView().findViewById(R.id.delay10);
     }
 
-    public void clickEvents() {
+    private void clickEvents() {
         takePictureBtn.setOnClickListener(this);
         changeBtn.setOnClickListener(this);
         mImageView.setOnClickListener(this);
@@ -353,14 +343,16 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     private void handleTakePhotoEvent() {
-        Animation animation = AnimationUtils.loadAnimation(getContext(), R.anim.countdown_timer);
+        animation = AnimationUtils.loadAnimation(getContext(), R.anim.countdown_timer);
         if (delayState == 0) {
             takePhoto();
         } else {
-            new CountDownTimer(delayTime + 300, 1000) {
+            countDownTimer = new CountDownTimer(delayTime + 300, 1000) {
                 @SuppressLint("SetTextI18n")
                 @Override
                 public void onTick(long millisUntilFinished) {
+                    Log.d(TAG, "CountDownTimer-onTick");
+                    MainActivity.touchEnabled = false;
                     photoMode.setVisibility(View.GONE);
                     recordingMode.setVisibility(View.GONE);
                     ratioSelected.setVisibility(View.GONE);
@@ -371,31 +363,41 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                     mirror.setVisibility(View.GONE);
 
                     countdown.setText(millisUntilFinished / 1000 + "");
+                    if (millisUntilFinished / 1000 == 0) {
+                        countdown.setText("");
+                    }
                     countdown.setVisibility(View.VISIBLE);
                     countdown.startAnimation(animation);
                 }
 
                 @Override
                 public void onFinish() {
-                    animation.setFillAfter(false);
-                    countdown.setVisibility(View.GONE);
-                    takePhoto();
-                    photoMode.setVisibility(View.VISIBLE);
-                    recordingMode.setVisibility(View.VISIBLE);
-                    ratioSelected.setVisibility(View.VISIBLE);
-                    delayBtn.setVisibility(View.VISIBLE);
-                    mImageView.setVisibility(View.VISIBLE);
-                    takePictureBtn.setVisibility(View.VISIBLE);
-                    changeBtn.setVisibility(View.VISIBLE);
-                    if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
-                        mirror.setVisibility(View.VISIBLE);
-                    }
+                    Log.d(TAG, "CountDownTimer-onFinish");
+                    countdownEnd();
+                    MainActivity.touchEnabled = true;
                 }
-            }.start();
+            };
+            countDownTimer.start();
+        }
+    }
+    private void countdownEnd() {
+        animation.setFillAfter(false);
+        countdown.setVisibility(View.GONE);
+        takePhoto();
+        photoMode.setVisibility(View.VISIBLE);
+        recordingMode.setVisibility(View.VISIBLE);
+        ratioSelected.setVisibility(View.VISIBLE);
+        delayBtn.setVisibility(View.VISIBLE);
+        mImageView.setVisibility(View.VISIBLE);
+        takePictureBtn.setVisibility(View.VISIBLE);
+        changeBtn.setVisibility(View.VISIBLE);
+        if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
+            mirror.setVisibility(View.VISIBLE);
         }
     }
 
     private void handleRatio1_1() {
+        MainActivity.touchEnabled = false;
         ratioSelected.setText(ratio1_1.getText());
         ratio1_1.setTextColor(ratioSelected.getTextColors());
         ratio4_3.setTextColor(Color.WHITE);
@@ -410,6 +412,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     private void handleRatio4_3() {
+        MainActivity.touchEnabled = false;
         ratioSelected.setText(ratio4_3.getText());
         ratio4_3.setTextColor(ratioSelected.getTextColors());
         ratio1_1.setTextColor(Color.WHITE);
@@ -424,6 +427,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     private void handleRatioFull() {
+        MainActivity.touchEnabled = false;
         ratioSelected.setText(ratioFull.getText());
         ratioFull.setTextColor(ratioSelected.getTextColors());
         ratio1_1.setTextColor(Color.WHITE);
@@ -545,7 +549,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     };
 
     //配置相机
-    public void setupCamera() {
+    private void setupCamera() {
         Log.d(TAG, "setupCamera");
 
         String tempId = "";
@@ -560,7 +564,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                     continue;
                 }
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(ImageFormat.JPEG), width, height, deviceWidth, deviceHeight);
+                mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
                 textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 textureView.setSurfaceTextureListener(textureListener);
                 mask.setLayoutParams(textureView.getLayoutParams());
@@ -609,7 +613,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     }
 
     //打开相机
-    public void openCamera() {
+    private void openCamera() {
         Log.d(TAG, "openCamera");
 
         try {
@@ -631,7 +635,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     }
 
-    public void closeCamera() {
+    private void closeCamera() {
         Log.d(TAG, "closeCamera");
 
         if (mCaptureSession != null) {
@@ -701,23 +705,19 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 byte[] bytes = new byte[buffer.remaining()];
                 buffer.get(bytes);
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, null);
-
+                ImageSaver imageSaver = new ImageSaver(bitmap, bytes);
                 image.close();
-                reader.close();
 //                if (bitmap != null && !bitmap.isRecycled()) {
 //                    bitmap.recycle();
 //                    bitmap = null;
 //                }
 
-                ImageSaver imageSaver = new ImageSaver(bitmap, bytes);
                 Bundle mBundle = new Bundle();
                 mBundle.putSerializable("imageSaver", imageSaver);
                 Message msg = Message.obtain();
                 msg.setData(mBundle);
-                new Thread(() -> {
-                    msg.what = SAVEIMAGE;
-                    handler.sendMessage(msg);
-                }).start();
+                msg.what = SAVEIMAGE;
+                handler.sendMessage(msg);
             }
         }, null);
     }
@@ -750,6 +750,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             mCaptureSession.setRepeatingRequest(mPreviewRequest, captureCallback, null);
             Thread.sleep(500);
             mask.setVisibility(View.GONE);
+            MainActivity.touchEnabled = true;
         } catch (CameraAccessException | InterruptedException e) {
             e.printStackTrace();
         }
@@ -779,9 +780,9 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             final CaptureRequest.Builder mCaptureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             mCaptureBuilder.addTarget(mImageReader.getSurface());
             if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
-                mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, FRONT_ORIENTATIONS.get(rotation));
+                mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, CameraUtil.FRONT_ORIENTATIONS.get(rotation));
             } else {
-                mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, BACK_ORIENTATIONS.get(rotation));
+                mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, CameraUtil.BACK_ORIENTATIONS.get(rotation));
             }
             mCaptureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
             mCaptureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
@@ -794,8 +795,9 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void changeCamera() {
         Log.d(TAG, "changeCamera");
 
+        MainActivity.touchEnabled = false;
         ObjectAnimator anim = ObjectAnimator.ofFloat(changeBtn, "rotation", 0f, 180f);
-        anim.setDuration(300);
+        anim.setDuration(1000);
         anim.start();
         if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
             Log.d(TAG, "前置转后置");
@@ -868,6 +870,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             mBytes = bytes;
         }
 
+        @SuppressLint("HandlerLeak")
         @Override
         public void run() {
             if (flag && mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
@@ -908,7 +911,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     }
 
-    private final Handler handler = new Handler(Looper.myLooper()) {
+    @SuppressLint("HandlerLeak")
+    private final Handler handler = new Handler() {
         @Override
         public void handleMessage(@NonNull Message msg) {
             super.handleMessage(msg);

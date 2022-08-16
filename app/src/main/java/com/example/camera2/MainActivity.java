@@ -14,11 +14,12 @@ import com.example.camera2.mode.TakePictureFragment;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "MainActivity";
+
     private float downX = 0;
     private float downY = 0;
     private int currentMode = 0;    //0: photoMode, 1: videoMode
-
-    private static final String TAG = "MainActivity";
+    public static boolean touchEnabled = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,26 +47,30 @@ public class MainActivity extends AppCompatActivity {
         getWindow().setStatusBarColor(0x00000000);
         getWindow().setNavigationBarColor(0x00000000);
         ActionBar actionBar = getSupportActionBar();
-        actionBar.hide();
+        if (actionBar != null) {
+            actionBar.hide();
+        }
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            downX = event.getX();
-            downY = event.getY();
-            Log.d("down", "x: " + downX);
-        }
-        if(event.getAction() == MotionEvent.ACTION_UP) {
-            float upX = event.getX();
-            float upY = event.getY();
-            Log.d("up", "x: " + upX);
+        if (touchEnabled) {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                downX = event.getX();
+                downY = event.getY();
+                Log.d("down", "x: " + downX);
+            }
+            if(event.getAction() == MotionEvent.ACTION_UP) {
+                float upX = event.getX();
+                float upY = event.getY();
+                Log.d("up", "x: " + upX);
 
-            if (Math.abs(downY - upY) < Math.abs(downX - upX)) {
-                if ((downX - upX > 100) && currentMode == 0) {
-                    videoMode();
-                } else if ((upX - downX > 100) && currentMode == 1) {
-                    photoMode();
+                if (Math.abs(downY - upY) < Math.abs(downX - upX)) {
+                    if ((downX - upX > 100) && currentMode == 0) {
+                        videoMode();
+                    } else if ((upX - downX > 100) && currentMode == 1) {
+                        photoMode();
+                    }
                 }
             }
         }
