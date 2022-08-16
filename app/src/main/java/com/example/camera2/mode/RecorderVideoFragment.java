@@ -54,7 +54,6 @@ import com.example.camera2.view.AutoFitTextureView;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -68,6 +67,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private ImageButton change;
     private Chronometer timer;
     private LinearLayout timerBg;
+    private ImageButton photoMode;
+    private ImageButton recordingMode;
     private TextView videoQuality;
     private String quality = "480P";
     private CaptureRequest.Builder mPreviewCaptureRequestBuilder;
@@ -90,7 +91,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private boolean isRecording = false;
     private MediaRecorder mMediaRecorder;
     private CameraManager mCameraManager;
-    private final ArrayList<String> imageList = new ArrayList<>();
     private ImageView mask;
 
     @Nullable
@@ -137,8 +137,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         change = view.findViewById(R.id.mChange);
         timer = view.findViewById(R.id.timer);
         timerBg = view.findViewById(R.id.timerBg);
-        ImageButton photoMode = view.findViewById(R.id.mPhotoMode);
-        ImageButton recordingMode = view.findViewById(R.id.mRecordingMode);
+        photoMode = view.findViewById(R.id.mPhotoMode);
+        recordingMode = view.findViewById(R.id.mRecordingMode);
         videoQuality = view.findViewById(R.id.videoQuality);
         mask = view.findViewById(R.id.videoMask);
 
@@ -160,7 +160,17 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                     recording.setImageResource(R.drawable.recording);
                     stopRecorder();
                     isRecording = false;
+                    photoMode.setVisibility(View.VISIBLE);
+                    recordingMode.setVisibility(View.VISIBLE);
+                    videoQuality.setVisibility(View.VISIBLE);
+                    mImageView.setVisibility(View.VISIBLE);
+                    change.setVisibility(View.VISIBLE);
                 } else {
+                    photoMode.setVisibility(View.GONE);
+                    recordingMode.setVisibility(View.GONE);
+                    videoQuality.setVisibility(View.GONE);
+                    mImageView.setVisibility(View.GONE);
+                    change.setVisibility(View.GONE);
                     isRecording = true;
                     recording.setImageResource(R.drawable.stop_recording);
                     configSession();

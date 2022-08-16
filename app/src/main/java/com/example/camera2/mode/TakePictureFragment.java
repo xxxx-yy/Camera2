@@ -364,6 +364,15 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 @SuppressLint("SetTextI18n")
                 @Override
                 public void onTick(long millisUntilFinished) {
+                    photoMode.setVisibility(View.GONE);
+                    recordingMode.setVisibility(View.GONE);
+                    ratioSelected.setVisibility(View.GONE);
+                    delayBtn.setVisibility(View.GONE);
+                    mImageView.setVisibility(View.GONE);
+                    takePictureBtn.setVisibility(View.GONE);
+                    changeBtn.setVisibility(View.GONE);
+                    mirror.setVisibility(View.GONE);
+
                     countdown.setText(millisUntilFinished / 1000 + "");
                     countdown.setVisibility(View.VISIBLE);
                     countdown.startAnimation(animation);
@@ -374,6 +383,16 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                     animation.setFillAfter(false);
                     countdown.setVisibility(View.GONE);
                     takePhoto();
+                    photoMode.setVisibility(View.VISIBLE);
+                    recordingMode.setVisibility(View.VISIBLE);
+                    ratioSelected.setVisibility(View.VISIBLE);
+                    delayBtn.setVisibility(View.VISIBLE);
+                    mImageView.setVisibility(View.VISIBLE);
+                    takePictureBtn.setVisibility(View.VISIBLE);
+                    changeBtn.setVisibility(View.VISIBLE);
+                    if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
+                        mirror.setVisibility(View.VISIBLE);
+                    }
                 }
             }.start();
         }
