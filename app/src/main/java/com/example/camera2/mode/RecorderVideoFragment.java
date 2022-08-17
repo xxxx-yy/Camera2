@@ -20,6 +20,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.MediaActionSound;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
@@ -85,6 +86,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private CameraManager mCameraManager;
     private ImageView mask;
     private int rotation = 0;
+    private final MediaActionSound sound = new MediaActionSound();
 
     @Nullable
     @Override
@@ -152,9 +154,11 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         switch (view.getId()) {
             case R.id.recordingBtn:
                 if (isRecording) {
+                    sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
                     initRecording();
                     stopRecorder();
                 } else {
+                    sound.play(MediaActionSound.START_VIDEO_RECORDING);
                     noRecording();
                 }
                 break;

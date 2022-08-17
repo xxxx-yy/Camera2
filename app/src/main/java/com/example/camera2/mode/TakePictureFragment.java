@@ -28,6 +28,7 @@ import android.hardware.camera2.params.Face;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.media.MediaActionSound;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -347,6 +348,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
     private void handleTakePhotoEvent() {
         animation = AnimationUtils.loadAnimation(getContext(), R.anim.countdown_timer);
+        MediaActionSound sound = new MediaActionSound();
+        sound.play(MediaActionSound.SHUTTER_CLICK);
         if (delayState == 0) {
             takePhoto();
         } else {
