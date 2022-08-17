@@ -52,6 +52,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -115,6 +116,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private ImageView mImageView;
     private CameraManager mManager;
     private Size mPreviewSize;
+    private Size mPhotoSize;
     private String mCameraId = "";
     private ImageReader mImageReader;
     private CameraCaptureSession mCaptureSession;
@@ -291,6 +293,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         mirror.setOnClickListener(this);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @SuppressLint("NonConstantResourceId")
     @Override
     public void onClick(View view) {
@@ -396,6 +399,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void handleRatio1_1() {
         MainActivity.touchEnabled = false;
         ratioSelected.setText(ratio1_1.getText());
@@ -411,6 +415,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         openCamera();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void handleRatio4_3() {
         MainActivity.touchEnabled = false;
         ratioSelected.setText(ratio4_3.getText());
@@ -426,6 +431,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         openCamera();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void handleRatioFull() {
         MainActivity.touchEnabled = false;
         ratioSelected.setText(ratioFull.getText());
@@ -492,6 +498,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
     //TextureView回调
     private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
+        @RequiresApi(api = Build.VERSION_CODES.N)
         @Override
         public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
             Log.d(TAG, "onSurfaceTextureAvailable");
@@ -549,6 +556,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     };
 
     //配置相机
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void setupCamera() {
         Log.d(TAG, "setupCamera");
 
@@ -565,6 +573,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 }
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
+                mPhotoSize = CameraUtil.getMaxSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
                 textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 textureView.setSurfaceTextureListener(textureListener);
                 mask.setLayoutParams(textureView.getLayoutParams());
@@ -694,7 +703,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
     //获取摄像头的图像数据
     private void setupImageReader() {
-        mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.JPEG, 2);
+        mImageReader = ImageReader.newInstance(mPhotoSize.getWidth(), mPhotoSize.getHeight(), ImageFormat.JPEG, 2);
         mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader reader) {
