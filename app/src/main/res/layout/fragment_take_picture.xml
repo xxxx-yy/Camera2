@@ -35,7 +35,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="30dp"
+            android:layout_marginBottom="5dp"
             android:gravity="center"
             android:orientation="horizontal"
             android:padding="5dp">
@@ -53,6 +53,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg"
+                android:padding="5dp"
                 android:src="@drawable/video" />
 
         </LinearLayout>
@@ -68,6 +69,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:clickable="true"
+                android:padding="10dp"
                 android:text="@string/ratio4_3"
                 android:textColor="#ffff8811"
                 android:textSize="18sp" />
@@ -79,6 +81,7 @@
                 android:layout_marginLeft="50dp"
                 android:layout_marginRight="50dp"
                 android:background="@drawable/bg"
+                android:padding="10dp"
                 android:src="@drawable/delay_off" />
 
             <ImageButton
@@ -86,6 +89,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg"
+                android:padding="10dp"
                 android:src="@drawable/mirror_on"
                 android:visibility="gone" />
 

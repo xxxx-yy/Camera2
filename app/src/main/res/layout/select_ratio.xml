@@ -5,14 +5,14 @@
     android:layout_height="wrap_content"
     android:background="@drawable/bg"
     android:orientation="horizontal"
-    android:padding="10dp">
+    android:padding="5dp">
 
     <TextView
         android:id="@+id/ratio_1_1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="10dp"
         android:clickable="true"
+        android:padding="10dp"
         android:text="@string/ratio1_1"
         android:textColor="@color/white"
         android:textSize="16sp" />
@@ -21,9 +21,8 @@
         android:id="@+id/ratio_4_3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="20dp"
-        android:layout_marginRight="20dp"
         android:clickable="true"
+        android:padding="10dp"
         android:text="@string/ratio4_3"
         android:textColor="#ffff8811"
         android:textSize="16sp" />
@@ -32,8 +31,8 @@
         android:id="@+id/ratio_full"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginRight="10dp"
         android:clickable="true"
+        android:padding="10dp"
         android:text="@string/ratio_full"
         android:textColor="@color/white"
         android:textSize="16sp" />
