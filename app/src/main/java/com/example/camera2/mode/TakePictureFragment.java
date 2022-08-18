@@ -358,8 +358,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
     private void handleTakePhotoEvent() {
         animation = AnimationUtils.loadAnimation(getContext(), R.anim.countdown_timer);
-        MediaActionSound sound = new MediaActionSound();
-        sound.play(MediaActionSound.SHUTTER_CLICK);
         if (delayState == 0) {
             takePhoto();
         } else {
@@ -798,6 +796,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         set.play(scaleXAnim).with(scaleYAnim);
         set.setDuration(300);
         set.start();
+        MediaActionSound sound = new MediaActionSound();
+        sound.play(MediaActionSound.SHUTTER_CLICK);
         try {
             final CaptureRequest.Builder mCaptureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             mCaptureBuilder.addTarget(mImageReader.getSurface());
