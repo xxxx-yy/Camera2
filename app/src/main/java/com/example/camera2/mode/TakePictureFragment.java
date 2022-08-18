@@ -358,6 +358,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
     private void handleTakePhotoEvent() {
         animation = AnimationUtils.loadAnimation(getContext(), R.anim.countdown_timer);
+        MainActivity.touchEnabled = false;
+        recordingMode.setClickable(false);
         if (delayState == 0) {
             takePhoto();
         } else {
@@ -366,7 +368,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 @Override
                 public void onTick(long millisUntilFinished) {
                     Log.d(TAG, "CountDownTimer-onTick");
-                    MainActivity.touchEnabled = false;
                     photoMode.setVisibility(View.GONE);
                     recordingMode.setVisibility(View.GONE);
                     ratioSelected.setVisibility(View.GONE);
@@ -388,7 +389,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 public void onFinish() {
                     Log.d(TAG, "CountDownTimer-onFinish");
                     countdownEnd();
-                    MainActivity.touchEnabled = true;
                 }
             };
             countDownTimer.start();
@@ -720,6 +720,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             public void onImageAvailable(ImageReader reader) {
                 Log.d(TAG, "图片已保存");
 
+                MainActivity.touchEnabled = true;
+                recordingMode.setClickable(true);
                 Image image = reader.acquireNextImage();
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                 byte[] bytes = new byte[buffer.remaining()];
@@ -782,7 +784,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
             super.onCaptureCompleted(session, request, result);
             Log.d(TAG, "onCaptureCompleted");
-//            repeatPreview();
+
             handleFaces(result);
         }
     };
