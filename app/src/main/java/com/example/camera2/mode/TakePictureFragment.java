@@ -57,6 +57,7 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentResultListener;
 
 import com.example.camera2.util.CameraUtil;
 import com.example.camera2.view.AutoFitTextureView;
@@ -164,6 +165,12 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         Log.d(TAG, "onResume");
 
         super.onResume();
+        getParentFragmentManager().setFragmentResultListener("videoModeData", this, new FragmentResultListener() {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result) {
+                mCameraId = result.getString("CamID");
+            }
+        });
         CameraUtil.setLastImagePath(mImageView);
         if (textureView.isAvailable()) {
             openCamera();
@@ -177,6 +184,9 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         Log.d(TAG, "onPause");
 
         super.onPause();
+        Bundle result = new Bundle();
+        result.putString("CamID", mCameraId);
+        getParentFragmentManager().setFragmentResult("photoModeData", result);
         if (countDownTimer != null) {
             countDownTimer.cancel();
             countdownEnd();

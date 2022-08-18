@@ -47,6 +47,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentResultListener;
 
 import com.example.camera2.MainActivity;
 import com.example.camera2.R;
@@ -106,6 +107,12 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Log.d(TAG, "onResume");
 
         super.onResume();
+        getParentFragmentManager().setFragmentResultListener("photoModeData", this, new FragmentResultListener() {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result) {
+                mCameraId = result.getString("CamID");
+            }
+        });
         initRecording();
         CameraUtil.setLastImagePath(mImageView);
         if (textureView.isAvailable()) {
@@ -121,6 +128,9 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Log.d(TAG, "onPause");
 
         super.onPause();
+        Bundle result = new Bundle();
+        result.putString("CamID", mCameraId);
+        getParentFragmentManager().setFragmentResult("videoModeData", result);
         stopRecorder();
         closeCamera();
     }
@@ -588,6 +598,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         if (mMediaRecorder != null) {
             mMediaRecorder.stop();
             mMediaRecorder.reset();
+            mMediaRecorder = null;
         }
         endTime();
         CameraUtil.broadcast(requireActivity());

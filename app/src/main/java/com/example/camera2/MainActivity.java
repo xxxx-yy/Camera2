@@ -2,6 +2,7 @@ package com.example.camera2;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentTransaction;
 
 import android.os.Bundle;
 import android.util.Log;
@@ -20,6 +21,9 @@ public class MainActivity extends AppCompatActivity {
     private float downY = 0;
     private int currentMode = 0;    //0: photoMode, 1: videoMode
     public static boolean touchEnabled = true;
+
+    TakePictureFragment photoFragment = new TakePictureFragment();
+    RecorderVideoFragment videoFragment = new RecorderVideoFragment();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,16 +85,14 @@ public class MainActivity extends AppCompatActivity {
     public void videoMode() {
         Log.d(TAG, "changeToRecord");
 
-        RecorderVideoFragment fragment = new RecorderVideoFragment();
-        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).commit();
+        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, videoFragment).commit();
         currentMode = 1;
     }
 
     public void photoMode() {
         Log.d(TAG, "changeToTakePicture");
 
-        TakePictureFragment fragment = new TakePictureFragment();
-        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).commit();
+        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, photoFragment).commit();
         currentMode = 0;
     }
 }
