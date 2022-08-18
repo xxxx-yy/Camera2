@@ -315,6 +315,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 handleTakePhotoEvent();
                 break;
             case R.id.change:
+                changeBtn.setClickable(false);
                 changeCamera();
                 break;
             case R.id.imageView:
@@ -772,6 +773,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             mCaptureSession.setRepeatingRequest(mPreviewRequest, captureCallback, null);
             Thread.sleep(500);
             mask.setVisibility(View.GONE);
+            changeBtn.setClickable(true);
             MainActivity.touchEnabled = true;
         } catch (CameraAccessException | InterruptedException e) {
             e.printStackTrace();

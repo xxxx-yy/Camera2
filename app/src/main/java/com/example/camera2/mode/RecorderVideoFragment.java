@@ -176,6 +176,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 CameraUtil.openAlbum(getContext());
                 break;
             case R.id.mChange:
+                change.setClickable(false);
                 changeCamera();
                 break;
             case R.id.mPhotoMode:
@@ -394,6 +395,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             mCameraDevice.createCaptureSession(Collections.singletonList(previewSurface), sessionStateCallback, mChildHandler);
             Thread.sleep(450);
             mask.setVisibility(View.GONE);
+            change.setClickable(true);
         } catch (CameraAccessException | InterruptedException e) {
             e.printStackTrace();
         }
