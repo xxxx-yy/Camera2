@@ -44,7 +44,7 @@
                 android:id="@+id/photoMode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="50dp"
+                android:layout_marginEnd="50dp"
                 android:background="@drawable/bg"
                 android:src="@drawable/photo_selected" />
 
@@ -72,14 +72,14 @@
                 android:padding="10dp"
                 android:text="@string/ratio4_3"
                 android:textColor="#ffff8811"
-                android:textSize="18sp" />
+                android:textSize="18sp"
+                android:focusable="true" />
 
             <ImageButton
                 android:id="@+id/delay"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="50dp"
-                android:layout_marginRight="50dp"
+                android:layout_marginStart="50dp"
                 android:background="@drawable/bg"
                 android:padding="10dp"
                 android:src="@drawable/delay_off" />
@@ -88,6 +88,7 @@
                 android:id="@+id/mirror"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="50dp"
                 android:background="@drawable/bg"
                 android:padding="10dp"
                 android:src="@drawable/mirror_on"
