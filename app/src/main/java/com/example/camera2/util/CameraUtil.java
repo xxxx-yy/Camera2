@@ -74,23 +74,22 @@ public class CameraUtil {
             Log.d(TAG, "preview choose--------width: " + result.getHeight() + ", height: " + result.getWidth());
             return result;
         } else {
-            for (int j = 1; j < 41; ++j) {
-                for (Size itemSize : sizeMap) {
-                    if (itemSize.getHeight() < (deviceWidth + j * 5) && itemSize.getHeight() > (deviceWidth - j * 5)) {
-                        if (result != null) {
-                            if (Math.abs(deviceHeight - itemSize.getWidth()) < Math.abs(deviceHeight - result.getWidth())) {
-                                result = itemSize;
-                            }
-                        } else {
-                            result = itemSize;
-                        }
+            float deviceRatio = (float) deviceWidth / deviceHeight;
+            for (Size itemSize: sizeMap) {
+                float ratioList = (float) itemSize.getHeight() / itemSize.getWidth();
+                if (result == null) {
+                    result = itemSize;
+                } else {
+                    float resultRatio = (float) result.getHeight() / result.getWidth();
+                    if (Math.abs(ratioList - deviceRatio) < Math.abs(resultRatio - deviceRatio)) {
+                        result = itemSize;
                     }
                 }
-                if (result != null) {
-                    Log.d(TAG, "preview Full choose--------width: " + result.getHeight());
-                    Log.d(TAG, "preview Full choose--------height: " + result.getWidth());
-                    return result;
-                }
+            }
+            if (result != null) {
+                Log.d(TAG, "preview Full choose--------width: " + result.getHeight());
+                Log.d(TAG, "preview Full choose--------height: " + result.getWidth());
+                return result;
             }
         }
         return sizeMap[0];
@@ -121,39 +120,22 @@ public class CameraUtil {
             Log.d(TAG, "photo choose--------width: " + result.getHeight() + ", height: " + result.getWidth());
             return result;
         } else {
-            for (int j = 1; j < 41; ++j) {
-                for (Size itemSize : sizeMap) {
-                    if (itemSize.getHeight() < (deviceWidth + j * 5) && itemSize.getHeight() > (deviceWidth - j * 5)) {
-                        if (result != null) {
-                            if (Math.abs(deviceHeight - itemSize.getWidth()) < Math.abs(deviceHeight - result.getWidth())) {
-                                result = itemSize;
-                            }
-                        } else {
-                            result = itemSize;
-                        }
+            float deviceRatio = (float) deviceWidth / deviceHeight;
+            for (Size itemSize: sizeMap) {
+                float ratioList = (float) itemSize.getHeight() / itemSize.getWidth();
+                if (result == null) {
+                    result = itemSize;
+                } else {
+                    float resultRatio = (float) result.getHeight() / result.getWidth();
+                    if (Math.abs(ratioList - deviceRatio) < Math.abs(resultRatio - deviceRatio)) {
+                        result = itemSize;
                     }
                 }
-                List<Size> fullSizeList = new ArrayList<>();
-                if (result != null) {
-                    for (Size size: sizeMap) {
-                        if ((float) size.getHeight() / size.getWidth() == (float) result.getHeight() / result.getWidth()) {
-                            fullSizeList.add(size);
-                        }
-                    }
-                    if (fullSizeList.size() > 0) {
-                        Collections.sort(fullSizeList, new Comparator<Size>() {
-                            @Override
-                            public int compare(Size o1, Size o2) {
-                                return o1.getWidth() * o1.getHeight() - o2.getWidth() * o2.getHeight();
-                            }
-                        });
-                        Collections.reverse(fullSizeList);
-                        result = fullSizeList.get(0);
-                    }
-                    Log.d(TAG, "preview Full choose--------width: " + result.getHeight());
-                    Log.d(TAG, "preview Full choose--------height: " + result.getWidth());
-                    return result;
-                }
+            }
+            if (result != null) {
+                Log.d(TAG, "photo Full choose--------width: " + result.getHeight());
+                Log.d(TAG, "photo Full choose--------height: " + result.getWidth());
+                return result;
             }
         }
         return sizeMap[0];

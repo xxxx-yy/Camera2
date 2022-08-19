@@ -11,6 +11,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
+import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
@@ -35,12 +36,12 @@ import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.OrientationEventListener;
 import android.view.Surface;
+import android.view.SurfaceHolder;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -247,9 +248,14 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         mirror = view.findViewById(R.id.mirror);
         initRatio();
         initDelayTime();
-        DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
-        deviceWidth = displayMetrics.widthPixels;
-        deviceHeight = displayMetrics.heightPixels;
+//        DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
+//        deviceWidth = displayMetrics.widthPixels;
+//        deviceHeight = displayMetrics.heightPixels;
+        Point point = new Point();
+        requireActivity().getWindowManager().getDefaultDisplay().getRealSize(point);
+        deviceWidth = point.x;
+        deviceHeight = point.y;
+
         faceView = view.findViewById(R.id.faceView);
         mask = view.findViewById(R.id.photoMask);
     }
@@ -589,8 +595,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 Log.d(TAG, "mCameraId: " + mCameraId);
 
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
-                mPhotoSize = CameraUtil.getMaxSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
+                mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(SurfaceHolder.class), width, height, deviceWidth, deviceHeight);
+                mPhotoSize = CameraUtil.getMaxSize(map.getOutputSizes(SurfaceHolder.class), width, height, deviceWidth, deviceHeight);
                 textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 textureView.setSurfaceTextureListener(textureListener);
                 mask.setLayoutParams(textureView.getLayoutParams());
