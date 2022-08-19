@@ -27,6 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
+        android:layout_marginTop="20dp"
         android:background="#66000000"
         android:gravity="center"
         android:orientation="vertical"
@@ -69,11 +70,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:clickable="true"
+                android:focusable="true"
                 android:padding="10dp"
                 android:text="@string/ratio4_3"
                 android:textColor="#ffff8811"
-                android:textSize="18sp"
-                android:focusable="true" />
+                android:textSize="18sp" />
 
             <ImageButton
                 android:id="@+id/delay"

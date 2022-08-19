@@ -120,6 +120,9 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private Size mPreviewSize;
     private Size mPhotoSize;
     private String mCameraId = "";
+    private final String BACK_CAMERA_ID = "0";
+    private final String FRONT_CAMERA_ID = "1";
+    private boolean back = true;
     private ImageReader mImageReader;
     private CameraCaptureSession mCaptureSession;
     private CameraDevice mCameraDevice;
@@ -133,8 +136,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private int mFaceDetectMode;
     private float scaledWidth;
     private float scaledHeight;
-    private float sizeScaledWidth;
-    private float sizeScaledHeight;
     private final ArrayList<RectF> mFacesRect = new ArrayList<>();
     private FaceDetectListener mFaceDetectListener;
     private FaceView faceView;
@@ -168,7 +169,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         getParentFragmentManager().setFragmentResultListener("videoModeData", this, new FragmentResultListener() {
             @Override
             public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result) {
-                mCameraId = result.getString("CamID");
+                back = result.getBoolean("BackCam");
             }
         });
         CameraUtil.setLastImagePath(mImageView);
@@ -185,7 +186,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         super.onPause();
         Bundle result = new Bundle();
-        result.putString("CamID", mCameraId);
+        result.putBoolean("BackCam", back);
         getParentFragmentManager().setFragmentResult("photoModeData", result);
         if (countDownTimer != null) {
             countDownTimer.cancel();
@@ -264,7 +265,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         ratio.setBackgroundDrawable(new ColorDrawable(0x00000000));
         ratio.setContentView(LayoutInflater.from(getActivity()).inflate(R.layout.select_ratio, null));
         ratio.setFocusable(true);
-        ratioSelected.setOnClickListener(v -> ratio.showAsDropDown(view.findViewById(R.id.ratio_selected), -120, 0));
+        ratioSelected.setOnClickListener(v -> ratio.showAsDropDown(view.findViewById(R.id.ratio_selected), -90, 0));
         ratio1_1 = ratio.getContentView().findViewById(R.id.ratio_1_1);
         ratio4_3 = ratio.getContentView().findViewById(R.id.ratio_4_3);
         ratioFull = ratio.getContentView().findViewById(R.id.ratio_full);
@@ -281,7 +282,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         delayTimeWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
         delayTimeWindow.setContentView(LayoutInflater.from(getActivity()).inflate(R.layout.select_delay_time, null));
         delayTimeWindow.setFocusable(true);
-        delayBtn.setOnClickListener(v -> delayTimeWindow.showAsDropDown(view.findViewById(R.id.delay), -155, 0));
+        delayBtn.setOnClickListener(v -> delayTimeWindow.showAsDropDown(view.findViewById(R.id.delay), -140, 0));
         noDelay = delayTimeWindow.getContentView().findViewById(R.id.noDelay);
         delay3 = delayTimeWindow.getContentView().findViewById(R.id.delay3);
         delay5 = delayTimeWindow.getContentView().findViewById(R.id.delay5);
@@ -395,6 +396,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             countDownTimer.start();
         }
     }
+
     private void countdownEnd() {
         animation.setFillAfter(false);
         countdown.setVisibility(View.GONE);
@@ -406,7 +408,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         mImageView.setVisibility(View.VISIBLE);
         takePictureBtn.setVisibility(View.VISIBLE);
         changeBtn.setVisibility(View.VISIBLE);
-        if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
+        if (mCameraId.equals(FRONT_CAMERA_ID)) {
             mirror.setVisibility(View.VISIBLE);
         }
     }
@@ -568,31 +570,30 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     };
 
     //配置相机
-    @RequiresApi(api = Build.VERSION_CODES.N)
     private void setupCamera() {
         Log.d(TAG, "setupCamera");
 
-        String tempId = "";
-        if (!mCameraId.equals("")) {
-            tempId = mCameraId;
-        }
         try {
             for (String cameraId : mManager.getCameraIdList()) {
                 CameraCharacteristics characteristics = mManager.getCameraCharacteristics(cameraId);
-
-                if (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
-                    continue;
+                if (back) {
+                    if (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
+                        continue;
+                    }
+                } else {
+                    if (characteristics.get(CameraCharacteristics.LENS_FACING) != CameraCharacteristics.LENS_FACING_FRONT) {
+                        continue;
+                    }
                 }
+                mCameraId = cameraId;
+                Log.d(TAG, "mCameraId: " + mCameraId);
+
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
                 mPhotoSize = CameraUtil.getMaxSize(map.getOutputSizes(SurfaceTexture.class), width, height, deviceWidth, deviceHeight);
                 textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 textureView.setSurfaceTextureListener(textureListener);
                 mask.setLayoutParams(textureView.getLayoutParams());
-                mCameraId = cameraId;
-                if (!tempId.equals("")) {
-                    mCameraId = tempId;
-                }
 
                 int[] faceDetectModes = characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES);
                 int faceDetectCount = characteristics.get(CameraCharacteristics.STATISTICS_INFO_MAX_FACE_COUNT);
@@ -615,14 +616,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 Rect activeArraySizeRect = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
                 scaledWidth = mPreviewSize.getWidth() / (float) activeArraySizeRect.width();
                 scaledHeight = mPreviewSize.getHeight() / (float) activeArraySizeRect.height();
-                float previewRatio = (float) mPreviewSize.getWidth() / mPreviewSize.getHeight();
-                float activeArraySizeRectRatio = (float) activeArraySizeRect.width() / activeArraySizeRect.height();
-                if (previewRatio != activeArraySizeRectRatio) {
-                    sizeScaledWidth = sizeScaledHeight = Math.max(scaledWidth, scaledHeight);
-                } else {
-                    sizeScaledWidth = scaledWidth;
-                    sizeScaledHeight = scaledHeight;
-                }
                 Log.d(TAG, "成像区域  " + activeArraySizeRect.width() + "*" + activeArraySizeRect.height());
                 Log.d(TAG, "预览区域  " + mPreviewSize.getWidth() + "*" + mPreviewSize.getHeight());
 
@@ -794,18 +787,13 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void takePhoto() {
         Log.d(TAG, "takePhoto");
 
-        ObjectAnimator scaleXAnim = ObjectAnimator.ofFloat(takePictureBtn, "scaleX", 1f, 0.8f, 1f);
-        ObjectAnimator scaleYAnim = ObjectAnimator.ofFloat(takePictureBtn, "scaleY", 1f, 0.8f, 1f);
-        AnimatorSet set = new AnimatorSet();
-        set.play(scaleXAnim).with(scaleYAnim);
-        set.setDuration(300);
-        set.start();
+        CameraUtil.scaleAnim(takePictureBtn, 1f, 0.8f, 1f, 300).start();
         MediaActionSound sound = new MediaActionSound();
         sound.play(MediaActionSound.SHUTTER_CLICK);
         try {
             final CaptureRequest.Builder mCaptureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             mCaptureBuilder.addTarget(mImageReader.getSurface());
-            if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
+            if (mCameraId.equals(FRONT_CAMERA_ID)) {
                 mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, CameraUtil.FRONT_ORIENTATIONS.get(rotation));
             } else {
                 mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, CameraUtil.BACK_ORIENTATIONS.get(rotation));
@@ -821,19 +809,17 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void changeCamera() {
         Log.d(TAG, "changeCamera");
 
+        back = !back;
         MainActivity.touchEnabled = false;
-        ObjectAnimator anim = ObjectAnimator.ofFloat(changeBtn, "rotation", 0f, 180f);
-        anim.setDuration(1000);
+        ObjectAnimator anim = ObjectAnimator.ofFloat(changeBtn, "rotation", 0f, -180f);
+        anim.setDuration(1200);
         anim.start();
-        if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
-            Log.d(TAG, "前置转后置");
-            mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_FRONT);
+        if (back) {
             mirror.setVisibility(View.GONE);
         } else {
-            Log.d(TAG, "后置转前置");
-            mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_BACK);
             mirror.setVisibility(View.VISIBLE);
         }
+        setupCamera();
         closeCamera();
         openCamera();
     }
@@ -863,14 +849,19 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             Log.d("BEFORE", bounds.width() + "*" + bounds.height() + "    left: " + left + "  top: " + top +
                     "  right: " + right + " bottom: " + bottom);
             RectF rawFaceRect;
+            float offset;
             if (scaledWidth > scaledHeight) {
-                rawFaceRect = new RectF((float) left * sizeScaledWidth, (float) top * scaledHeight, right * sizeScaledWidth, (float) top * scaledHeight + bounds.height() * sizeScaledHeight);
+                //Full
+                offset = (float) (bounds.width() * scaledWidth - bounds.height() * scaledHeight) / 2;
+                rawFaceRect = new RectF((float) left * scaledWidth, (float) top * scaledHeight - offset, right * scaledWidth, bottom * scaledHeight + offset);
             } else {
-                rawFaceRect = new RectF((float) left * scaledWidth, (float) top * sizeScaledHeight, left * scaledWidth + bounds.width() * sizeScaledWidth, (float) bottom * sizeScaledHeight);
+                //4:3, 1:1
+                offset = (float) (bounds.height() * scaledHeight - bounds.width() * scaledWidth) / 2;
+                rawFaceRect = new RectF((float) left * scaledWidth - offset, (float) top * scaledHeight, right * scaledWidth + offset, (float) bottom * scaledHeight);
             }
 
             RectF resultFaceRect;
-            if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_FRONT))) {
+            if (mCameraId.equals(BACK_CAMERA_ID)) {
                 resultFaceRect = new RectF(mPreviewSize.getHeight() - rawFaceRect.bottom, rawFaceRect.left + textureView.getTop(), mPreviewSize.getHeight() - rawFaceRect.top, rawFaceRect.right + textureView.getTop());
             } else {
                 resultFaceRect = new RectF(mPreviewSize.getHeight() - rawFaceRect.bottom, mPreviewSize.getWidth() - rawFaceRect.right + textureView.getTop(), mPreviewSize.getHeight() - rawFaceRect.top, mPreviewSize.getWidth() - rawFaceRect.left + textureView.getTop());
@@ -899,7 +890,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         @SuppressLint("HandlerLeak")
         @Override
         public void run() {
-            if (flag && mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
+            if (flag && mCameraId.equals(FRONT_CAMERA_ID)) {
                 Matrix m = new Matrix();
                 m.postScale(-1, 1);
                 mBitmap = Bitmap.createBitmap(mBitmap, 0, 0, mBitmap.getWidth(), mBitmap.getHeight(), m, true);

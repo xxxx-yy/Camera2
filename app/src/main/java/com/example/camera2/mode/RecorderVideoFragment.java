@@ -47,7 +47,6 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentResultListener;
 
 import com.example.camera2.MainActivity;
 import com.example.camera2.R;
@@ -77,6 +76,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private CaptureRequest.Builder mPreviewCaptureRequestBuilder;
 
     private String mCameraId = "";
+    private boolean back = true;
     private CameraDevice mCameraDevice;
     private Size mPreviewSize;
     private CameraCaptureSession mCameraCaptureSession;
@@ -107,12 +107,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Log.d(TAG, "onResume");
 
         super.onResume();
-        getParentFragmentManager().setFragmentResultListener("photoModeData", this, new FragmentResultListener() {
-            @Override
-            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result) {
-                mCameraId = result.getString("CamID");
-            }
-        });
+        getParentFragmentManager().setFragmentResultListener("photoModeData", this, (requestKey, result) -> back = result.getBoolean("BackCam"));
         initRecording();
         CameraUtil.setLastImagePath(mImageView);
         if (textureView.isAvailable()) {
@@ -129,7 +124,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
         super.onPause();
         Bundle result = new Bundle();
-        result.putString("CamID", mCameraId);
+        result.putBoolean("BackCam", back);
         getParentFragmentManager().setFragmentResult("videoModeData", result);
         stopRecorder();
         closeCamera();
@@ -228,7 +223,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         mChildHandler = new Handler(mHandlerThread.getLooper());
     }
 
-    public void stopBackgroudThread() {
+    private void stopBackgroudThread() {
         if (mHandlerThread != null) {
             mHandlerThread.quitSafely();
             try {
@@ -301,15 +296,17 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Log.d(TAG, "setupCamera");
 
         mCameraManager = (CameraManager) requireActivity().getSystemService(Context.CAMERA_SERVICE);
-        String tempId = "";
-        if (!mCameraId.equals("")) {
-            tempId = mCameraId;
-        }
         try {
             for (String cameraId : mCameraManager.getCameraIdList()) {
                 CameraCharacteristics characteristics = mCameraManager.getCameraCharacteristics(cameraId);
-                if (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
-                    continue;
+                if (back) {
+                    if (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
+                        continue;
+                    }
+                } else {
+                    if (characteristics.get(CameraCharacteristics.LENS_FACING) != CameraCharacteristics.LENS_FACING_FRONT) {
+                        continue;
+                    }
                 }
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
@@ -317,9 +314,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 mask.setLayoutParams(textureView.getLayoutParams());
                 mCameraId = cameraId;
-                if (!tempId.equals("")) {
-                    mCameraId = tempId;
-                }
                 break;
             }
         } catch (CameraAccessException e) {
@@ -461,16 +455,11 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private void changeCamera() {
         Log.d(TAG, "changeCamera");
 
-        ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, 180f);
-        anim.setDuration(1000);
+        back = !back;
+        ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, -180f);
+        anim.setDuration(1200);
         anim.start();
-        if (mCameraId.equals(String.valueOf(CameraCharacteristics.LENS_FACING_BACK))) {
-            Log.d(TAG, "前置转后置");
-            mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_FRONT);
-        } else {
-            Log.d(TAG, "后置转前置");
-            mCameraId = String.valueOf(CameraCharacteristics.LENS_FACING_BACK);
-        }
+        setUpCamera();
         closeCamera();
         openCamera();
     }
@@ -580,23 +569,13 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     };
 
     private void startRecorder() {
-        ObjectAnimator scaleXAnim = ObjectAnimator.ofFloat(recording, "scaleX", 1f, 0.8f, 1f);
-        ObjectAnimator scaleYAnim = ObjectAnimator.ofFloat(recording, "scaleY", 1f, 0.8f, 1f);
-        AnimatorSet set = new AnimatorSet();
-        set.play(scaleXAnim).with(scaleYAnim);
-        set.setDuration(300);
-        set.start();
+        CameraUtil.scaleAnim(recording, 1f, 0.8f, 1f, 300).start();
         mMediaRecorder.start();
         startTime();
     }
 
     private void stopRecorder() {
-        ObjectAnimator scaleXAnim = ObjectAnimator.ofFloat(recording, "scaleX", 1f, 0.8f, 1f);
-        ObjectAnimator scaleYAnim = ObjectAnimator.ofFloat(recording, "scaleY", 1f, 0.8f, 1f);
-        AnimatorSet set = new AnimatorSet();
-        set.play(scaleXAnim).with(scaleYAnim);
-        set.setDuration(300);
-        set.start();
+        CameraUtil.scaleAnim(recording, 1f, 0.8f, 1f, 300).start();
         if (mMediaRecorder != null) {
             mMediaRecorder.stop();
             mMediaRecorder.reset();

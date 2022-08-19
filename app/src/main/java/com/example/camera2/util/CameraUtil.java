@@ -1,5 +1,8 @@
 package com.example.camera2.util;
 
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -9,15 +12,12 @@ import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Surface;
 import android.widget.ImageView;
-
-import androidx.annotation.RequiresApi;
 
 import com.example.camera2.ImageShowActivity;
 import com.example.camera2.R;
@@ -97,7 +97,6 @@ public class CameraUtil {
     }
 
     //获取照片尺寸
-    @RequiresApi(api = Build.VERSION_CODES.N)
     public static Size getMaxSize(Size[] sizeMap, int width, int height, int deviceWidth, int deviceHeight) {
         Log.d(TAG, "getMaxSize");
 
@@ -111,7 +110,12 @@ public class CameraUtil {
         }
 
         if (sizeList.size() > 0) {
-            Collections.sort(sizeList, Comparator.comparingInt(o -> o.getWidth() * o.getHeight()));
+            Collections.sort(sizeList, new Comparator<Size>() {
+                @Override
+                public int compare(Size o1, Size o2) {
+                    return o1.getWidth() * o1.getHeight() - o2.getWidth() * o2.getHeight();
+                }
+            });
             Collections.reverse(sizeList);
             result = sizeList.get(0);
             Log.d(TAG, "photo choose--------width: " + result.getHeight() + ", height: " + result.getWidth());
@@ -137,7 +141,12 @@ public class CameraUtil {
                         }
                     }
                     if (fullSizeList.size() > 0) {
-                        Collections.sort(fullSizeList, Comparator.comparingInt(o -> o.getWidth() * o.getHeight()));
+                        Collections.sort(fullSizeList, new Comparator<Size>() {
+                            @Override
+                            public int compare(Size o1, Size o2) {
+                                return o1.getWidth() * o1.getHeight() - o2.getWidth() * o2.getHeight();
+                            }
+                        });
                         Collections.reverse(fullSizeList);
                         result = fullSizeList.get(0);
                     }
@@ -246,5 +255,16 @@ public class CameraUtil {
             matrix.postRotate(180, centerX, centerY);
         }
         return matrix;
+    }
+
+    public static AnimatorSet scaleAnim(Object target, float v1, float v2, float v3, long duration) {
+        @SuppressLint("ObjectAnimatorBinding")
+        ObjectAnimator scaleXAnim = ObjectAnimator.ofFloat(target, "scaleX", v1, v2, v3);
+        @SuppressLint("ObjectAnimatorBinding")
+        ObjectAnimator scaleYAnim = ObjectAnimator.ofFloat(target, "scaleY", v1, v2, v3);
+        AnimatorSet set = new AnimatorSet();
+        set.play(scaleXAnim).with(scaleYAnim);
+        set.setDuration(duration);
+        return set;
     }
 }
