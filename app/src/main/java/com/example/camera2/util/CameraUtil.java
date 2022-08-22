@@ -86,6 +86,22 @@ public class CameraUtil {
                     }
                 }
             }
+            List<Size> resultList = new ArrayList<>();
+            for (Size itemSize: sizeMap) {
+                if (((float) itemSize.getHeight() / itemSize.getWidth()) == ((float) result.getHeight() / result.getWidth())) {
+                    resultList.add(itemSize);
+                }
+            }
+            if (resultList.size() > 0) {
+                for (int i = 0; i < resultList.size(); ++i) {
+                    Log.d(TAG, "-----resultList[" + i + "]-----" + resultList.get(i).getHeight() + "*" + resultList.get(i).getWidth());
+                    if (Math.abs(resultList.get(i).getWidth() * resultList.get(i).getHeight() - deviceWidth * deviceHeight) <
+                            Math.abs(result.getWidth() * result.getHeight() - deviceWidth * deviceHeight)) {
+                        result = resultList.get(i);
+                    }
+                }
+
+            }
             if (result != null) {
                 Log.d(TAG, "preview Full choose--------width: " + result.getHeight());
                 Log.d(TAG, "preview Full choose--------height: " + result.getWidth());
