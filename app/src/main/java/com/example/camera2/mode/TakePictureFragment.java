@@ -173,6 +173,9 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 back = result.getBoolean("BackCam");
             }
         });
+        if (!back) {
+            mirror.setVisibility(View.VISIBLE);
+        }
         CameraUtil.setLastImagePath(mImageView);
         if (textureView.isAvailable()) {
             openCamera();
