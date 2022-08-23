@@ -41,6 +41,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -159,9 +160,15 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         switch (view.getId()) {
             case R.id.recordingBtn:
                 if (isRecording) {
-                    sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
-                    initRecording();
-                    stopRecorder();
+                    Log.d(TAG, Integer.parseInt((timer.getText() + "").replace(":", "")) + "");
+                    int recordTime = Integer.parseInt((timer.getText() + "").replace(":", ""));
+                    if (recordTime > 2) {
+                        sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
+                        initRecording();
+                        stopRecorder();
+                    } else {
+                        Toast.makeText(getContext(), "请至少录制2秒以上", Toast.LENGTH_SHORT).show();
+                    }
                 } else {
                     sound.play(MediaActionSound.START_VIDEO_RECORDING);
                     noRecording();
@@ -288,7 +295,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
         @Override
         public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
-            Log.d(TAG, "onSurfaceTextureUpdated");
+//            Log.d(TAG, "onSurfaceTextureUpdated");
         }
     };
 
