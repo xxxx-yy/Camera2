@@ -89,6 +89,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private ImageView mask;
     private int rotation = 0;
     private final MediaActionSound sound = new MediaActionSound();
+    private boolean pause = false;
 
     @Nullable
     @Override
@@ -108,6 +109,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Log.d(TAG, "onResume");
 
         super.onResume();
+        pause = false;
         getParentFragmentManager().setFragmentResultListener("photoModeData", this, (requestKey, result) -> back = result.getBoolean("BackCam"));
         initRecording();
         try {
@@ -128,6 +130,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Log.d(TAG, "onPause");
 
         super.onPause();
+        pause = true;
         Bundle result = new Bundle();
         result.putBoolean("BackCam", back);
         getParentFragmentManager().setFragmentResult("videoModeData", result);
@@ -607,7 +610,9 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         endTime();
         CameraUtil.broadcast(requireActivity());
         CameraUtil.setLastImagePath(mImageView);
-        startPreview();
+        if (!pause) {
+            startPreview();
+        }
     }
 
     private void startTime() {
