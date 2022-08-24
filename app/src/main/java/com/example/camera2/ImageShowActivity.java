@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.camera2.util.CameraUtil;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 public class ImageShowActivity extends AppCompatActivity {
@@ -26,7 +27,12 @@ public class ImageShowActivity extends AppCompatActivity {
         setContentView(R.layout.activity_image_show);
         Log.e(TAG, "onCreate success!");
 
-        ArrayList<String> imageList = CameraUtil.getFilePath();
+        ArrayList<String> imageList = null;
+        try {
+            imageList = CameraUtil.getFilePath();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         String lastImagePath = imageList.get(imageList.size() - 1);
         goToGallery(lastImagePath);
     }

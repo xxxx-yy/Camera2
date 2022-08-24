@@ -150,12 +150,12 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         view = inflater.inflate(R.layout.fragment_take_picture, container, false);
 
-        getPermission();
-
         initView(view);
 
         mManager = (CameraManager) requireActivity().getSystemService(Context.CAMERA_SERVICE);
         textureView.setSurfaceTextureListener(textureListener);
+
+        getPermission();
 
         clickEvents();
 
@@ -176,8 +176,13 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         if (!back) {
             mirror.setVisibility(View.VISIBLE);
         }
-        CameraUtil.setLastImagePath(mImageView);
+        try {
+            CameraUtil.setLastImagePath(mImageView);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         if (textureView.isAvailable()) {
+            setupCamera();
             openCamera();
         } else {
             textureView.setSurfaceTextureListener(textureListener);
@@ -231,6 +236,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 }
             }
             if (deniedPermissions.isEmpty()) {
+                setupCamera();
                 openCamera();
             } else {
                 getPermission();
@@ -251,9 +257,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         mirror = view.findViewById(R.id.mirror);
         initRatio();
         initDelayTime();
-//        DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
-//        deviceWidth = displayMetrics.widthPixels;
-//        deviceHeight = displayMetrics.heightPixels;
         Point point = new Point();
         requireActivity().getWindowManager().getDefaultDisplay().getRealSize(point);
         deviceWidth = point.x;
@@ -329,7 +332,11 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 changeCamera();
                 break;
             case R.id.imageView:
-                CameraUtil.openAlbum(getContext());
+                try {
+                    CameraUtil.openAlbum(getContext());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 break;
             case R.id.recordingMode:
                 ((MainActivity) requireActivity()).videoMode();
@@ -828,8 +835,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         } else {
             mirror.setVisibility(View.VISIBLE);
         }
-        setupCamera();
         closeCamera();
+        setupCamera();
         openCamera();
     }
 
@@ -861,11 +868,11 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             float offset;
             if (scaledWidth > scaledHeight) {
                 //Full
-                offset = (float) (bounds.width() * scaledWidth - bounds.height() * scaledHeight) / 2;
+                offset = (bounds.width() * scaledWidth - bounds.height() * scaledHeight) / 2;
                 rawFaceRect = new RectF((float) left * scaledWidth, (float) top * scaledHeight - offset, right * scaledWidth, bottom * scaledHeight + offset);
             } else {
                 //4:3, 1:1
-                offset = (float) (bounds.height() * scaledHeight - bounds.width() * scaledWidth) / 2;
+                offset = (bounds.height() * scaledHeight - bounds.width() * scaledWidth) / 2;
                 rawFaceRect = new RectF((float) left * scaledWidth - offset, (float) top * scaledHeight, right * scaledWidth + offset, (float) bottom * scaledHeight);
             }
 
@@ -932,7 +939,11 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 }
                 CameraUtil.broadcast(requireActivity());
                 imageList.add(path);
-                CameraUtil.setLastImagePath(mImageView);
+                try {
+                    CameraUtil.setLastImagePath(mImageView);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }

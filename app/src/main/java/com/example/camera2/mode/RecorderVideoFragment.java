@@ -110,7 +110,11 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         super.onResume();
         getParentFragmentManager().setFragmentResultListener("photoModeData", this, (requestKey, result) -> back = result.getBoolean("BackCam"));
         initRecording();
-        CameraUtil.setLastImagePath(mImageView);
+        try {
+            CameraUtil.setLastImagePath(mImageView);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         if (textureView.isAvailable()) {
             setUpCamera();
             openCamera();
@@ -127,7 +131,11 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Bundle result = new Bundle();
         result.putBoolean("BackCam", back);
         getParentFragmentManager().setFragmentResult("videoModeData", result);
-        stopRecorder();
+        try {
+            stopRecorder();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         closeCamera();
     }
 
@@ -165,7 +173,11 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                     if (recordTime > 2) {
                         sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
                         initRecording();
-                        stopRecorder();
+                        try {
+                            stopRecorder();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     } else {
                         Toast.makeText(getContext(), "请至少录制2秒以上", Toast.LENGTH_SHORT).show();
                     }
@@ -175,7 +187,11 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 }
                 break;
             case R.id.mImageView:
-                CameraUtil.openAlbum(getContext());
+                try {
+                    CameraUtil.openAlbum(getContext());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 break;
             case R.id.mChange:
                 change.setClickable(false);
@@ -466,8 +482,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, -180f);
         anim.setDuration(1200);
         anim.start();
-        setUpCamera();
         closeCamera();
+        setUpCamera();
         openCamera();
     }
 
@@ -581,7 +597,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         startTime();
     }
 
-    private void stopRecorder() {
+    private void stopRecorder() throws IOException {
         CameraUtil.scaleAnim(recording, 1f, 0.8f, 1f, 300).start();
         if (mMediaRecorder != null) {
             mMediaRecorder.stop();

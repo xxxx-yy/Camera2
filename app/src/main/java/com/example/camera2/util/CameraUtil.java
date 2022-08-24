@@ -23,6 +23,9 @@ import com.example.camera2.ImageShowActivity;
 import com.example.camera2.R;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -157,7 +160,7 @@ public class CameraUtil {
         return sizeMap[0];
     }
 
-    public static ArrayList<String> getFilePath() {
+    public static ArrayList<String> getFilePath() throws IOException {
         ArrayList<String> imageList = new ArrayList<>();
         File file = new File(Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera");
         if (!file.exists()) {
@@ -171,15 +174,26 @@ public class CameraUtil {
             Log.e("GetImageFilePath", "'Camera' already exists, but it isn't a directory.");
         }
         File[] dirEpub = file.listFiles();
+        long size = 0;
         if (dirEpub != null) {
             for (File value : dirEpub) {
-                String fileName = value.toString();
-                String tmp = Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera";
-                if (fileName.charAt(tmp.length() + 1) == '.') {
-                    continue;
+                FileInputStream fis = new FileInputStream(value);
+                size = fis.available();
+                if (size > 0) {
+                    String fileName = value.toString();
+                    String tmp = Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera";
+                    if (fileName.charAt(tmp.length() + 1) == '.') {
+                        continue;
+                    }
+                    imageList.add(fileName);
+                    Log.i("File", "File name = " + fileName);
+                } else {
+                    if (value.delete()) {
+                        Log.d(TAG, "delete success");
+                    } else {
+                        Log.d(TAG, "delete fail");
+                    }
                 }
-                imageList.add(fileName);
-                Log.i("File", "File name = " + fileName);
             }
         }
 
@@ -187,7 +201,7 @@ public class CameraUtil {
     }
 
     //最后拍摄图片的路径
-    public static void setLastImagePath(ImageView imageView) {
+    public static void setLastImagePath(ImageView imageView) throws IOException {
         Log.d(TAG, "setLastImagePath");
 
         //TODO bitmap未销毁 内存泄漏
@@ -213,7 +227,7 @@ public class CameraUtil {
         }
     }
 
-    public static void openAlbum(Context context) {
+    public static void openAlbum(Context context) throws IOException {
         Log.d(TAG, "openAlbum");
 
         ArrayList<String> imageList = CameraUtil.getFilePath();
