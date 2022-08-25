@@ -27,6 +27,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 import android.util.Size;
@@ -83,6 +84,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private CameraCaptureSession mCameraCaptureSession;
     private HandlerThread mHandlerThread;
     private Handler mChildHandler;
+    private Handler mMainHandler;
     private boolean isRecording = false;
     private MediaRecorder mMediaRecorder;
     private CameraManager mCameraManager;
@@ -112,11 +114,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         pause = false;
         getParentFragmentManager().setFragmentResultListener("photoModeData", this, (requestKey, result) -> back = result.getBoolean("BackCam"));
         initRecording();
-        try {
-            CameraUtil.setLastImagePath(mImageView);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        mMainHandler = new Handler(Looper.getMainLooper());
+        CameraUtil.setLastImagePath(mImageView, mMainHandler);
         if (textureView.isAvailable()) {
             setUpCamera();
             openCamera();
@@ -134,11 +133,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         Bundle result = new Bundle();
         result.putBoolean("BackCam", back);
         getParentFragmentManager().setFragmentResult("videoModeData", result);
-        try {
-            stopRecorder();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        stopRecorder();
+
         closeCamera();
     }
 
@@ -173,16 +169,12 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 if (isRecording) {
                     Log.d(TAG, Integer.parseInt((timer.getText() + "").replace(":", "")) + "");
                     int recordTime = Integer.parseInt((timer.getText() + "").replace(":", ""));
-                    if (recordTime > 2) {
+                    if (recordTime >= 1) {
                         sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
                         initRecording();
-                        try {
-                            stopRecorder();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                        stopRecorder();
                     } else {
-                        Toast.makeText(getContext(), "请至少录制2秒以上", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "请至少录制1秒", Toast.LENGTH_SHORT).show();
                     }
                 } else {
                     sound.play(MediaActionSound.START_VIDEO_RECORDING);
@@ -190,11 +182,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 }
                 break;
             case R.id.mImageView:
-                try {
-                    CameraUtil.openAlbum(getContext());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                CameraUtil.openAlbum(getContext());
                 break;
             case R.id.mChange:
                 change.setClickable(false);
@@ -600,7 +588,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         startTime();
     }
 
-    private void stopRecorder() throws IOException {
+    private void stopRecorder() {
         CameraUtil.scaleAnim(recording, 1f, 0.8f, 1f, 300).start();
         if (mMediaRecorder != null) {
             mMediaRecorder.stop();
@@ -609,7 +597,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         }
         endTime();
         CameraUtil.broadcast(requireActivity());
-        CameraUtil.setLastImagePath(mImageView);
+        CameraUtil.setLastImagePath(mImageView, mMainHandler);
         if (!pause) {
             startPreview();
         }

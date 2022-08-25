@@ -28,11 +28,7 @@ public class ImageShowActivity extends AppCompatActivity {
         Log.e(TAG, "onCreate success!");
 
         ArrayList<String> imageList = null;
-        try {
-            imageList = CameraUtil.getFilePath();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        imageList = CameraUtil.getFilePath();
         String lastImagePath = imageList.get(imageList.size() - 1);
         goToGallery(lastImagePath);
     }

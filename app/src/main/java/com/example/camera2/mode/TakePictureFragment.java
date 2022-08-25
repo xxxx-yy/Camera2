@@ -35,6 +35,8 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.util.Size;
@@ -142,6 +144,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private FaceView faceView;
     private ImageView mask;
 
+    private HandlerThread mHandlerThread;
+    private Handler mChildHandler;
+    private Handler mMainHandler;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -176,11 +182,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         if (!back) {
             mirror.setVisibility(View.VISIBLE);
         }
-        try {
-            CameraUtil.setLastImagePath(mImageView);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        mMainHandler = new Handler(Looper.getMainLooper());
+        CameraUtil.setLastImagePath(mImageView, mMainHandler);
         if (textureView.isAvailable()) {
             setupCamera();
             openCamera();
@@ -332,11 +335,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 changeCamera();
                 break;
             case R.id.imageView:
-                try {
-                    CameraUtil.openAlbum(getContext());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                CameraUtil.openAlbum(getContext());
                 break;
             case R.id.recordingMode:
                 ((MainActivity) requireActivity()).videoMode();
@@ -585,6 +584,36 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         }
     };
 
+    private void initChildHandler() {
+        mHandlerThread = new HandlerThread("HandlerThread");
+        mHandlerThread.start();
+        mChildHandler = new Handler(mHandlerThread.getLooper()) {
+            @Override
+            public void handleMessage(@NonNull Message msg) {
+                super.handleMessage(msg);
+
+                Bundle bundle;
+                if (msg.what == SAVEIMAGE) {
+                    bundle = msg.getData();
+                    ImageSaver imageSaver = (ImageSaver) bundle.getSerializable("imageSaver");
+                    imageSaver.run();
+                }
+            }
+        };
+    }
+
+    private void stopBackgroudThread() {
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+            try {
+                mHandlerThread.join();
+                mHandlerThread = null;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     //配置相机
     private void setupCamera() {
         Log.d(TAG, "setupCamera");
@@ -646,6 +675,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void openCamera() {
         Log.d(TAG, "openCamera");
 
+        initChildHandler();
         try {
             if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 return;
@@ -680,6 +710,8 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             mImageReader.close();
             mImageReader = null;
         }
+
+        stopBackgroudThread();
     }
 
     //打开相机回调
@@ -716,7 +748,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             if (mFaceDetectMode != CameraCharacteristics.STATISTICS_FACE_DETECT_MODE_OFF) {
                 mPreviewRequestBuilder.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE, mFaceDetectMode);
             }
-            mCameraDevice.createCaptureSession(Arrays.asList(mPreviewSurface, mImageReader.getSurface()), sessionStateCallback, null);
+            mCameraDevice.createCaptureSession(Arrays.asList(mPreviewSurface, mImageReader.getSurface()), sessionStateCallback, mChildHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -739,17 +771,17 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, null);
                 ImageSaver imageSaver = new ImageSaver(bitmap, bytes);
                 image.close();
-//                if (bitmap != null && !bitmap.isRecycled()) {
-//                    bitmap.recycle();
-//                    bitmap = null;
-//                }
+                if (bitmap != null && !bitmap.isRecycled()) {
+                    bitmap.recycle();
+                    bitmap = null;
+                }
 
                 Bundle mBundle = new Bundle();
                 mBundle.putSerializable("imageSaver", imageSaver);
                 Message msg = Message.obtain();
                 msg.setData(mBundle);
                 msg.what = SAVEIMAGE;
-                handler.sendMessage(msg);
+                mChildHandler.sendMessage(msg);
             }
         }, null);
     }
@@ -779,7 +811,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
         CaptureRequest mPreviewRequest = mPreviewRequestBuilder.build();
         try {
-            mCaptureSession.setRepeatingRequest(mPreviewRequest, captureCallback, null);
+            mCaptureSession.setRepeatingRequest(mPreviewRequest, captureCallback, mChildHandler);
             Thread.sleep(500);
             mask.setVisibility(View.GONE);
             changeBtn.setClickable(true);
@@ -939,28 +971,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 }
                 CameraUtil.broadcast(requireActivity());
                 imageList.add(path);
-                try {
-                    CameraUtil.setLastImagePath(mImageView);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                CameraUtil.setLastImagePath(mImageView, mMainHandler);
             }
         }
     }
-
-    @SuppressLint("HandlerLeak")
-    private final Handler handler = new Handler() {
-        @Override
-        public void handleMessage(@NonNull Message msg) {
-            super.handleMessage(msg);
-            Bundle bundle;
-            if (msg.what == SAVEIMAGE) {
-                bundle = msg.getData();
-                ImageSaver imageSaver = (ImageSaver) bundle.getSerializable("imageSaver");
-                imageSaver.run();
-            }
-        }
-    };
 
     private void rotationAnim() {
         float toValue = 0;
