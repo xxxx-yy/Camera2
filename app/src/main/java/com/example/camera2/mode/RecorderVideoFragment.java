@@ -90,7 +90,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     private CameraManager mCameraManager;
     private ImageView mask;
     private int rotation = 0;
-    private final MediaActionSound sound = new MediaActionSound();
     private boolean pause = false;
 
     @Nullable
@@ -170,15 +169,17 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                     Log.d(TAG, Integer.parseInt((timer.getText() + "").replace(":", "")) + "");
                     int recordTime = Integer.parseInt((timer.getText() + "").replace(":", ""));
                     if (recordTime >= 1) {
-                        sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
+                        CameraUtil.playSound(MediaActionSound.STOP_VIDEO_RECORDING);
                         initRecording();
+                        MainActivity.touchEnabled = true;
                         stopRecorder();
                     } else {
                         Toast.makeText(getContext(), "请至少录制1秒", Toast.LENGTH_SHORT).show();
                     }
                 } else {
-                    sound.play(MediaActionSound.START_VIDEO_RECORDING);
+                    CameraUtil.playSound(MediaActionSound.START_VIDEO_RECORDING);
                     noRecording();
+                    MainActivity.touchEnabled = false;
                 }
                 break;
             case R.id.mImageView:
@@ -189,6 +190,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 changeCamera();
                 break;
             case R.id.mPhotoMode:
+                photoMode.setClickable(false);
                 ((MainActivity) requireActivity()).photoMode();
                 break;
             case R.id.videoQuality:
@@ -214,12 +216,12 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         videoQuality.setVisibility(View.VISIBLE);
         mImageView.setVisibility(View.VISIBLE);
         change.setVisibility(View.VISIBLE);
-        MainActivity.touchEnabled = true;
+//        MainActivity.touchEnabled = true;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void noRecording() {
-        MainActivity.touchEnabled = false;
+//        MainActivity.touchEnabled = false;
         photoMode.setVisibility(View.GONE);
         recordingMode.setVisibility(View.GONE);
         videoQuality.setVisibility(View.GONE);
@@ -454,6 +456,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             HandlerThread thread = new HandlerThread("CameraPreview");
             thread.start();
             mCameraCaptureSession.setRepeatingRequest(mPreviewCaptureRequestBuilder.build(), null, mChildHandler);
+            MainActivity.touchEnabled = true;
+            photoMode.setClickable(true);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -471,7 +475,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
         back = !back;
         ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, -180f);
-        anim.setDuration(1200);
+        anim.setDuration(800);
         anim.start();
         closeCamera();
         setUpCamera();

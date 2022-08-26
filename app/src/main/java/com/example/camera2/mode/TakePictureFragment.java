@@ -308,7 +308,6 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         takePictureBtn.setOnClickListener(this);
         changeBtn.setOnClickListener(this);
         mImageView.setOnClickListener(this);
-        photoMode.setOnClickListener(this);
         recordingMode.setOnClickListener(this);
         ratio1_1.setOnClickListener(this);
         ratio4_3.setOnClickListener(this);
@@ -771,10 +770,10 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, null);
                 ImageSaver imageSaver = new ImageSaver(bitmap, bytes);
                 image.close();
-                if (bitmap != null && !bitmap.isRecycled()) {
-                    bitmap.recycle();
-                    bitmap = null;
-                }
+//                if (bitmap != null && !bitmap.isRecycled()) {
+//                    bitmap.recycle();
+//                    bitmap = null;
+//                }
 
                 Bundle mBundle = new Bundle();
                 mBundle.putSerializable("imageSaver", imageSaver);
@@ -813,7 +812,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         try {
             mCaptureSession.setRepeatingRequest(mPreviewRequest, captureCallback, mChildHandler);
             Thread.sleep(500);
-            mask.setVisibility(View.GONE);
+            mMainHandler.post(() -> mask.setVisibility(View.GONE));
             changeBtn.setClickable(true);
             MainActivity.touchEnabled = true;
         } catch (CameraAccessException | InterruptedException e) {
@@ -836,8 +835,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         Log.d(TAG, "takePhoto");
 
         CameraUtil.scaleAnim(takePictureBtn, 1f, 0.8f, 1f, 300).start();
-        MediaActionSound sound = new MediaActionSound();
-        sound.play(MediaActionSound.SHUTTER_CLICK);
+        CameraUtil.playSound(MediaActionSound.SHUTTER_CLICK);
         try {
             final CaptureRequest.Builder mCaptureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             mCaptureBuilder.addTarget(mImageReader.getSurface());
@@ -860,7 +858,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         back = !back;
         MainActivity.touchEnabled = false;
         ObjectAnimator anim = ObjectAnimator.ofFloat(changeBtn, "rotation", 0f, -180f);
-        anim.setDuration(1200);
+        anim.setDuration(800);
         anim.start();
         if (back) {
             mirror.setVisibility(View.GONE);

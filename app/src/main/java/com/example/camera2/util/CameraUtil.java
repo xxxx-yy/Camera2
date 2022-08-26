@@ -10,6 +10,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.RectF;
+import android.media.MediaActionSound;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Environment;
@@ -48,6 +49,7 @@ public class CameraUtil {
         BACK_ORIENTATIONS.append(Surface.ROTATION_180, 270);
         BACK_ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
+    private static final MediaActionSound mediaActionSound = new MediaActionSound();
 
     //获取最佳预览尺寸
     public static Size getOptimalSize(Size[] sizeMap, int width, int height, int deviceWidth, int deviceHeight) {
@@ -282,5 +284,17 @@ public class CameraUtil {
         set.play(scaleXAnim).with(scaleYAnim);
         set.setDuration(duration);
         return set;
+    }
+
+    public static void loadSound(int type) {
+        mediaActionSound.load(type);
+    }
+
+    public static void playSound(int type) {
+        mediaActionSound.play(type);
+    }
+
+    public static void releaseSound() {
+        mediaActionSound.release();
     }
 }

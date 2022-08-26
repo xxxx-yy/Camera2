@@ -3,6 +3,7 @@ package com.example.camera2;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.media.MediaActionSound;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -11,6 +12,7 @@ import android.view.WindowManager;
 
 import com.example.camera2.mode.RecorderVideoFragment;
 import com.example.camera2.mode.TakePictureFragment;
+import com.example.camera2.util.CameraUtil;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -35,6 +37,9 @@ public class MainActivity extends AppCompatActivity {
         TakePictureFragment fragment = new TakePictureFragment();
         getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, fragment).commit();
         currentMode = 0;
+        CameraUtil.loadSound(MediaActionSound.SHUTTER_CLICK);
+        CameraUtil.loadSound(MediaActionSound.START_VIDEO_RECORDING);
+        CameraUtil.loadSound(MediaActionSound.STOP_VIDEO_RECORDING);
     }
 
     public void fullScreen() {
@@ -67,8 +72,10 @@ public class MainActivity extends AppCompatActivity {
 
                 if (Math.abs(downY - upY) < Math.abs(downX - upX)) {
                     if ((downX - upX > 100) && currentMode == 0) {
+                        touchEnabled = false;
                         videoMode();
                     } else if ((upX - downX > 100) && currentMode == 1) {
+                        touchEnabled = false;
                         photoMode();
                     }
                 }
@@ -90,5 +97,11 @@ public class MainActivity extends AppCompatActivity {
 
         getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new TakePictureFragment()).commit();
         currentMode = 0;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        CameraUtil.releaseSound();
     }
 }
