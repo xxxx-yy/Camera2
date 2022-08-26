@@ -634,7 +634,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 mPreviewSize = CameraUtil.getOptimalSize(map.getOutputSizes(SurfaceHolder.class), width, height, deviceWidth, deviceHeight);
-                mPhotoSize = CameraUtil.getMaxSize(map.getOutputSizes(SurfaceHolder.class), width, height, deviceWidth, deviceHeight);
+                mPhotoSize = CameraUtil.getMaxSize(map.getOutputSizes(ImageFormat.JPEG), width, height, deviceWidth, deviceHeight);
                 textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 textureView.setSurfaceTextureListener(textureListener);
                 mask.setLayoutParams(textureView.getLayoutParams());

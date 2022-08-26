@@ -601,7 +601,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         }
         endTime();
         CameraUtil.broadcast(requireActivity());
-        CameraUtil.getThumbnail(mImageView, mMainHandler);
         if (!pause) {
             startPreview();
         }
