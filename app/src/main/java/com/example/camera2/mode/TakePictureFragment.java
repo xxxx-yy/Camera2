@@ -118,7 +118,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private Animation animation;
     private ImageButton mirror;
     private boolean mirrorFlag = true;
-    private ImageView mImageView;
+    private ImageView mThumbnailView;
     private CameraManager mManager;
     private Size mPreviewSize;
     private Size mPhotoSize;
@@ -183,7 +183,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             mirror.setVisibility(View.VISIBLE);
         }
         mMainHandler = new Handler(Looper.getMainLooper());
-        CameraUtil.setLastImagePath(mImageView, mMainHandler);
+        CameraUtil.getThumbnail(mThumbnailView, mMainHandler);
         if (textureView.isAvailable()) {
             setupCamera();
             openCamera();
@@ -252,7 +252,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
 
         textureView = view.findViewById(R.id.textureView);
         takePictureBtn = view.findViewById(R.id.takePhotoBtn);
-        mImageView = view.findViewById(R.id.imageView);
+        mThumbnailView = view.findViewById(R.id.imageView);
         changeBtn = view.findViewById(R.id.change);
         photoMode = view.findViewById(R.id.photoMode);
         recordingMode = view.findViewById(R.id.recordingMode);
@@ -307,7 +307,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
     private void clickEvents() {
         takePictureBtn.setOnClickListener(this);
         changeBtn.setOnClickListener(this);
-        mImageView.setOnClickListener(this);
+        mThumbnailView.setOnClickListener(this);
         recordingMode.setOnClickListener(this);
         ratio1_1.setOnClickListener(this);
         ratio4_3.setOnClickListener(this);
@@ -388,7 +388,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                     recordingMode.setVisibility(View.GONE);
                     ratioSelected.setVisibility(View.GONE);
                     delayBtn.setVisibility(View.GONE);
-                    mImageView.setVisibility(View.GONE);
+                    mThumbnailView.setVisibility(View.GONE);
                     takePictureBtn.setVisibility(View.GONE);
                     changeBtn.setVisibility(View.GONE);
                     mirror.setVisibility(View.GONE);
@@ -419,7 +419,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
         recordingMode.setVisibility(View.VISIBLE);
         ratioSelected.setVisibility(View.VISIBLE);
         delayBtn.setVisibility(View.VISIBLE);
-        mImageView.setVisibility(View.VISIBLE);
+        mThumbnailView.setVisibility(View.VISIBLE);
         takePictureBtn.setVisibility(View.VISIBLE);
         changeBtn.setVisibility(View.VISIBLE);
         if (mCameraId.equals(FRONT_CAMERA_ID)) {
@@ -767,6 +767,16 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                 byte[] bytes = new byte[buffer.remaining()];
                 buffer.get(bytes);
+
+                //拍照后更新缩略图
+                BitmapFactory.Options thumbnailDecOption = new BitmapFactory.Options();
+                thumbnailDecOption.inSampleSize = CameraUtil.calculateInSampleSize(mPhotoSize,
+                        getResources().getDimensionPixelOffset(R.dimen.thumbnailWidth),
+                        getResources().getDimensionPixelOffset(R.dimen.thumbnailHeight));
+                Bitmap thumbnailBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, thumbnailDecOption);
+                mThumbnailView.setImageBitmap(thumbnailBitmap);
+
+                //保存照片
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, null);
                 ImageSaver imageSaver = new ImageSaver(bitmap, bytes);
                 image.close();
@@ -969,7 +979,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                 }
                 CameraUtil.broadcast(requireActivity());
                 imageList.add(path);
-                CameraUtil.setLastImagePath(mImageView, mMainHandler);
+                //CameraUtil.setLastImagePath(getActivity(), mThumbnailView, mPhotoSize, mMainHandler);
             }
         }
     }
@@ -986,7 +996,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             toValue = -90;
         }
         ObjectAnimator changeAnim = ObjectAnimator.ofFloat(changeBtn, "rotation", 0f, toValue);
-        ObjectAnimator previewAnim = ObjectAnimator.ofFloat(mImageView, "rotation", 0f, toValue);
+        ObjectAnimator previewAnim = ObjectAnimator.ofFloat(mThumbnailView, "rotation", 0f, toValue);
         ObjectAnimator buttonAnim = ObjectAnimator.ofFloat(takePictureBtn, "rotation", 0f, toValue);
         ObjectAnimator ratioAnim = ObjectAnimator.ofFloat(ratioSelected, "rotation", 0f, toValue);
         ObjectAnimator delayAnim = ObjectAnimator.ofFloat(delayBtn, "rotation", 0f, toValue);

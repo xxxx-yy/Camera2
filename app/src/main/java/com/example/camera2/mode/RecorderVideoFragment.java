@@ -114,7 +114,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         getParentFragmentManager().setFragmentResultListener("photoModeData", this, (requestKey, result) -> back = result.getBoolean("BackCam"));
         initRecording();
         mMainHandler = new Handler(Looper.getMainLooper());
-        CameraUtil.setLastImagePath(mImageView, mMainHandler);
+        CameraUtil.getThumbnail(mImageView, mMainHandler);
         if (textureView.isAvailable()) {
             setUpCamera();
             openCamera();
@@ -601,7 +601,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         }
         endTime();
         CameraUtil.broadcast(requireActivity());
-        CameraUtil.setLastImagePath(mImageView, mMainHandler);
+        CameraUtil.getThumbnail(mImageView, mMainHandler);
         if (!pause) {
             startPreview();
         }

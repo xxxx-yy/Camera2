@@ -206,9 +206,8 @@ public class CameraUtil {
         return imageList;
     }
 
-    //最后拍摄图片的路径
-    public static void setLastImagePath(ImageView imageView, Handler handler) {
-        Log.d(TAG, "setLastImagePath");
+    public static void getThumbnail(ImageView imageView, Handler handler) {
+        Log.d(TAG, "getThumbnail");
 
         //TODO bitmap未销毁 内存泄漏
         ArrayList<String> imageList = getFilePath();
@@ -231,6 +230,22 @@ public class CameraUtil {
 //                bitmap = null;
 //            }
         }
+    }
+
+    public static int calculateInSampleSize(Size picSize, int reqHeight, int reqWidth) {
+        Log.d(TAG, "calculateInSampleSize");
+
+        int height = picSize.getWidth();
+        int width = picSize.getHeight();
+        int inSampleSize = 1;
+        if(height > reqHeight || width > reqWidth){
+            int halfHeight = height / 2;
+            int halfWidth = width / 2;
+            while((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2;
+            }
+        }
+        return inSampleSize;
     }
 
     public static void openAlbum(Context context) {
