@@ -738,6 +738,11 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                         getResources().getDimensionPixelOffset(R.dimen.thumbnailWidth),
                         getResources().getDimensionPixelOffset(R.dimen.thumbnailHeight));
                 Bitmap thumbnailBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, thumbnailDecOption);
+                if (mMirrorFlag) {
+                    Matrix m = new Matrix();
+                    m.postScale(-1, 1);
+                    thumbnailBitmap = Bitmap.createBitmap(thumbnailBitmap, 0, 0, thumbnailBitmap.getWidth(), thumbnailBitmap.getHeight(), m, true);
+                }
                 mThumbnailView.setImageBitmap(thumbnailBitmap);
 
                 //保存照片
