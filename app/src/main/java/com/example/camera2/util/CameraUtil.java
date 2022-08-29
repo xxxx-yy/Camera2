@@ -33,9 +33,7 @@ import java.util.Comparator;
 import java.util.List;
 
 public class CameraUtil {
-
     private static final String TAG = "CameraUtil";
-
     public static final SparseIntArray FRONT_ORIENTATIONS = new SparseIntArray();
     public static final SparseIntArray BACK_ORIENTATIONS = new SparseIntArray();
     static {
@@ -43,18 +41,16 @@ public class CameraUtil {
         FRONT_ORIENTATIONS.append(Surface.ROTATION_90, 0);
         FRONT_ORIENTATIONS.append(Surface.ROTATION_180, 90);
         FRONT_ORIENTATIONS.append(Surface.ROTATION_270, 180);
-
         BACK_ORIENTATIONS.append(Surface.ROTATION_0, 90);
         BACK_ORIENTATIONS.append(Surface.ROTATION_90, 0);
         BACK_ORIENTATIONS.append(Surface.ROTATION_180, 270);
         BACK_ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
-    private static final MediaActionSound mediaActionSound = new MediaActionSound();
+    private static final MediaActionSound mMediaActionSound = new MediaActionSound();
 
     //获取最佳预览尺寸
     public static Size getOptimalSize(Size[] sizeMap, int width, int height, int deviceWidth, int deviceHeight) {
         Log.d(TAG, "getOptimalSize");
-
         List<Size> sizeList = new ArrayList<>();
         Size result = null;
         for (Size option: sizeMap) {
@@ -65,7 +61,6 @@ public class CameraUtil {
                 Log.d(TAG, "sizeList--------width: " + option.getHeight() + ", height: " + option.getWidth());
             }
         }
-
         Log.d(TAG, "Device--------width: " + deviceWidth);
         Log.d(TAG, "Device--------height: " + deviceHeight);
         if (sizeList.size() > 0) {
@@ -119,7 +114,6 @@ public class CameraUtil {
     //获取照片尺寸
     public static Size getMaxSize(Size[] sizeMap, int width, int height, int deviceWidth, int deviceHeight) {
         Log.d(TAG, "getMaxSize");
-
         List<Size> sizeList = new ArrayList<>();
         Size result = null;
         for (Size option: sizeMap) {
@@ -128,7 +122,6 @@ public class CameraUtil {
                 sizeList.add(option);
             }
         }
-
         if (sizeList.size() > 0) {
             Collections.sort(sizeList, new Comparator<Size>() {
                 @Override
@@ -202,14 +195,11 @@ public class CameraUtil {
                 }
             }
         }
-
         return imageList;
     }
 
     public static void getThumbnail(ImageView imageView, Handler handler) {
         Log.d(TAG, "getThumbnail");
-
-        //TODO bitmap未销毁 内存泄漏
         ArrayList<String> imageList = getFilePath();
         if (imageList.isEmpty()) {
             imageView.setImageResource(R.drawable.no_photo);
@@ -224,17 +214,11 @@ public class CameraUtil {
                 bitmap = retriever.getFrameAtTime(1);
             }
             handler.post(() -> imageView.setImageBitmap(bitmap));
-
-//            if (bitmap != null && !bitmap.isRecycled()) {
-//                bitmap.recycle();
-//                bitmap = null;
-//            }
         }
     }
 
     public static int calculateInSampleSize(Size picSize, int reqHeight, int reqWidth) {
         Log.d(TAG, "calculateInSampleSize");
-
         int height = picSize.getWidth();
         int width = picSize.getHeight();
         int inSampleSize = 1;
@@ -250,7 +234,6 @@ public class CameraUtil {
 
     public static void openAlbum(Context context) {
         Log.d(TAG, "openAlbum");
-
         ArrayList<String> imageList = CameraUtil.getFilePath();
         if (!imageList.isEmpty()) {
             Intent intent = new Intent();
@@ -261,7 +244,6 @@ public class CameraUtil {
 
     public static void broadcast(Activity activity) {
         Log.d(TAG, "broadcast");
-
         String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/";
         Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
         Uri uri = Uri.fromFile(new File(path));
@@ -302,14 +284,14 @@ public class CameraUtil {
     }
 
     public static void loadSound(int type) {
-        mediaActionSound.load(type);
+        mMediaActionSound.load(type);
     }
 
     public static void playSound(int type) {
-        mediaActionSound.play(type);
+        mMediaActionSound.play(type);
     }
 
     public static void releaseSound() {
-        mediaActionSound.release();
+        mMediaActionSound.release();
     }
 }

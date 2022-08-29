@@ -15,20 +15,17 @@ import com.example.camera2.mode.TakePictureFragment;
 import com.example.camera2.util.CameraUtil;
 
 public class MainActivity extends AppCompatActivity {
-
     private static final String TAG = "MainActivity";
-
-    private float downX = 0;
-    private float downY = 0;
-    private int currentMode = 0;    //0: photoMode, 1: videoMode
-    public static boolean touchEnabled = true;
+    private float mDownX = 0;
+    private float mDownY = 0;
+    private int mCurrentMode = 0;    //0: photoMode, 1: videoMode
+    public static boolean mTouchEnabled = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_main);
-
         init();
         fullScreen();
     }
@@ -36,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
     public void init() {
         TakePictureFragment fragment = new TakePictureFragment();
         getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, fragment).commit();
-        currentMode = 0;
+        mCurrentMode = 0;
         CameraUtil.loadSound(MediaActionSound.SHUTTER_CLICK);
         CameraUtil.loadSound(MediaActionSound.START_VIDEO_RECORDING);
         CameraUtil.loadSound(MediaActionSound.STOP_VIDEO_RECORDING);
@@ -59,44 +56,40 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (touchEnabled) {
+        if (mTouchEnabled) {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                downX = event.getX();
-                downY = event.getY();
-                Log.d("down", "x: " + downX);
+                mDownX = event.getX();
+                mDownY = event.getY();
+                Log.d("down", "x: " + mDownX);
             }
             if(event.getAction() == MotionEvent.ACTION_UP) {
                 float upX = event.getX();
                 float upY = event.getY();
                 Log.d("up", "x: " + upX);
-
-                if (Math.abs(downY - upY) < Math.abs(downX - upX)) {
-                    if ((downX - upX > 100) && currentMode == 0) {
-                        touchEnabled = false;
+                if (Math.abs(mDownY - upY) < Math.abs(mDownX - upX)) {
+                    if ((mDownX - upX > 100) && mCurrentMode == 0) {
+                        mTouchEnabled = false;
                         videoMode();
-                    } else if ((upX - downX > 100) && currentMode == 1) {
-                        touchEnabled = false;
+                    } else if ((upX - mDownX > 100) && mCurrentMode == 1) {
+                        mTouchEnabled = false;
                         photoMode();
                     }
                 }
             }
         }
-
         return super.onTouchEvent(event);
     }
 
     public void videoMode() {
         Log.d(TAG, "changeToRecord");
-
         getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new RecorderVideoFragment()).commit();
-        currentMode = 1;
+        mCurrentMode = 1;
     }
 
     public void photoMode() {
         Log.d(TAG, "changeToTakePicture");
-
         getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new TakePictureFragment()).commit();
-        currentMode = 0;
+        mCurrentMode = 0;
     }
 
     @Override

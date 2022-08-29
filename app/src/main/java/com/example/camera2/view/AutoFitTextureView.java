@@ -6,9 +6,8 @@ import android.view.TextureView;
 import android.view.View;
 
 public class AutoFitTextureView extends TextureView {
-
-    private int ratioW = 0;
-    private int ratioH = 0;
+    private int mRatioW = 0;
+    private int mRatioH = 0;
 
     public AutoFitTextureView(Context context) {
         super(context);
@@ -26,9 +25,8 @@ public class AutoFitTextureView extends TextureView {
         if (width < 0 || height < 0) {
             throw new IllegalArgumentException("width or height can not be negative");
         }
-        ratioW = width;
-        ratioH = height;
-
+        mRatioW = width;
+        mRatioH = height;
         requestLayout();
     }
 
@@ -37,14 +35,13 @@ public class AutoFitTextureView extends TextureView {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int height = View.MeasureSpec.getSize(heightMeasureSpec);
-
-        if (ratioW == 0 || ratioH == 0) {
+        if (mRatioW == 0 || mRatioH == 0) {
             setMeasuredDimension(width, height);
         } else {
-            if (width < height * ratioW / ratioH) {
-                setMeasuredDimension(width, width * ratioH / ratioW);
+            if (width < height * mRatioW / mRatioH) {
+                setMeasuredDimension(width, width * mRatioH / mRatioW);
             } else {
-                setMeasuredDimension(height * ratioW / ratioH, height);
+                setMeasuredDimension(height * mRatioW / mRatioH, height);
             }
         }
     }

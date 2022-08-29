@@ -13,7 +13,6 @@ import androidx.annotation.Nullable;
 import java.util.ArrayList;
 
 public class FaceView extends View {
-
     private final String TAG = "FaceView";
     private Paint mPaint;
     private ArrayList<RectF> mFaces;
@@ -35,7 +34,6 @@ public class FaceView extends View {
 
     public void init() {
         Log.d(TAG, "init()");
-
         int mColor = 0xFFFF8811;
         mPaint = new Paint();
         mPaint.setColor(mColor);
@@ -47,8 +45,6 @@ public class FaceView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-
-//        Log.d(TAG, "onDraw()");
         if (mFaces != null) {
             for (int i = 0; i < mFaces.size(); ++i) {
                 canvas.drawRect(mFaces.get(i), mPaint);

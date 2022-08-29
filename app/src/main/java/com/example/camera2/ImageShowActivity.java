@@ -15,7 +15,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.camera2.util.CameraUtil;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
 public class ImageShowActivity extends AppCompatActivity {
@@ -26,8 +25,7 @@ public class ImageShowActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_show);
         Log.e(TAG, "onCreate success!");
-
-        ArrayList<String> imageList = null;
+        ArrayList<String> imageList;
         imageList = CameraUtil.getFilePath();
         String lastImagePath = imageList.get(imageList.size() - 1);
         goToGallery(lastImagePath);
@@ -35,10 +33,8 @@ public class ImageShowActivity extends AppCompatActivity {
 
     private void goToGallery(String path) {
         Log.e("TAG", "goToGallery success!");
-
         Uri uri = getMediaUriFromPath(this, path);
         Log.i("TAG", "uri: " + uri);
-
         Intent intent = new Intent("com.android.camera.action.REVIEW", uri);
         intent.setData(uri);
         startActivity(intent);
@@ -48,7 +44,6 @@ public class ImageShowActivity extends AppCompatActivity {
     @SuppressLint("Range")
     private Uri getMediaUriFromPath(Context context, String path) {
         Log.e("TAG", "getMediaUriFromPath success!");
-
         Uri uri = null;
         if (path.contains("jpg")) {
             Uri picUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;

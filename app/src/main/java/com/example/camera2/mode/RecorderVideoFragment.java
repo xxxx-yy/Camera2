@@ -64,99 +64,88 @@ import java.util.Date;
 
 public class RecorderVideoFragment extends Fragment implements View.OnClickListener {
     private static final String TAG = "RecorderVideoFragment";
-
-    private AutoFitTextureView textureView;
-    private ImageButton recording;
+    private AutoFitTextureView mTextureView;
+    private ImageButton mRecording;
     private ImageView mImageView;
-    private ImageButton change;
-    private Chronometer timer;
-    private LinearLayout timerBg;
-    private ImageButton photoMode;
-    private ImageButton recordingMode;
-    private TextView videoQuality;
-    private String quality = "480P";
+    private ImageButton mChange;
+    private Chronometer mTimer;
+    private LinearLayout mTimerBg;
+    private ImageButton mPhotoMode;
+    private ImageButton mRecordingMode;
+    private TextView mVideoQuality;
+    private String mQuality = "480P";
     private CaptureRequest.Builder mPreviewCaptureRequestBuilder;
-
     private String mCameraId = "";
-    private boolean back = true;
+    private boolean mBack = true;
     private CameraDevice mCameraDevice;
     private Size mPreviewSize;
     private CameraCaptureSession mCameraCaptureSession;
     private HandlerThread mHandlerThread;
     private Handler mChildHandler;
-    private Handler mMainHandler;
-    private boolean isRecording = false;
+    private boolean mIsRecording = false;
     private MediaRecorder mMediaRecorder;
     private CameraManager mCameraManager;
-    private ImageView mask;
-    private int rotation = 0;
-    private boolean pause = false;
+    private ImageView mMask;
+    private int mRotation = 0;
+    private boolean mPause = false;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         Log.d(TAG, "onCreateView");
-
         View view = inflater.inflate(R.layout.fragment_recorder, container, false);
-
         initView(view);
-
         return view;
     }
 
     @Override
     public void onResume() {
         Log.d(TAG, "onResume");
-
         super.onResume();
-        pause = false;
-        getParentFragmentManager().setFragmentResultListener("photoModeData", this, (requestKey, result) -> back = result.getBoolean("BackCam"));
+        mPause = false;
+        getParentFragmentManager().setFragmentResultListener("photoModeData", this, (requestKey, result) -> mBack = result.getBoolean("BackCam"));
         initRecording();
-        mMainHandler = new Handler(Looper.getMainLooper());
+        Handler mMainHandler = new Handler(Looper.getMainLooper());
         CameraUtil.getThumbnail(mImageView, mMainHandler);
-        if (textureView.isAvailable()) {
+        if (mTextureView.isAvailable()) {
             setUpCamera();
             openCamera();
         } else {
-            textureView.setSurfaceTextureListener(textureListener);
+            mTextureView.setSurfaceTextureListener(textureListener);
         }
     }
 
     @Override
     public void onPause() {
         Log.d(TAG, "onPause");
-
         super.onPause();
-        pause = true;
+        mPause = true;
         Bundle result = new Bundle();
-        result.putBoolean("BackCam", back);
+        result.putBoolean("BackCam", mBack);
         getParentFragmentManager().setFragmentResult("videoModeData", result);
         stopRecorder();
-
         closeCamera();
     }
 
     private void initView(View view) {
         Log.d(TAG, "initView");
-
-        textureView = view.findViewById(R.id.mTextureView);
-        recording = view.findViewById(R.id.recordingBtn);
+        mTextureView = view.findViewById(R.id.mTextureView);
+        mRecording = view.findViewById(R.id.recordingBtn);
         mImageView = view.findViewById(R.id.mImageView);
-        change = view.findViewById(R.id.mChange);
-        timer = view.findViewById(R.id.timer);
-        timerBg = view.findViewById(R.id.timerBg);
-        photoMode = view.findViewById(R.id.mPhotoMode);
-        recordingMode = view.findViewById(R.id.mRecordingMode);
-        videoQuality = view.findViewById(R.id.videoQuality);
-        mask = view.findViewById(R.id.videoMask);
-
-        recording.setOnClickListener(this);
+        mChange = view.findViewById(R.id.mChange);
+        mTimer = view.findViewById(R.id.timer);
+        mTimerBg = view.findViewById(R.id.timerBg);
+        mPhotoMode = view.findViewById(R.id.mPhotoMode);
+        mRecordingMode = view.findViewById(R.id.mRecordingMode);
+        mVideoQuality = view.findViewById(R.id.videoQuality);
+        mMask = view.findViewById(R.id.videoMask);
+        mRecording.setOnClickListener(this);
         mImageView.setOnClickListener(this);
-        change.setOnClickListener(this);
-        photoMode.setOnClickListener(this);
-        recordingMode.setOnClickListener(this);
-        videoQuality.setOnClickListener(this);
+        mChange.setOnClickListener(this);
+        mPhotoMode.setOnClickListener(this);
+        mRecordingMode.setOnClickListener(this);
+        mVideoQuality.setOnClickListener(this);
     }
 
     @SuppressLint("NonConstantResourceId")
@@ -165,13 +154,13 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.recordingBtn:
-                if (isRecording) {
-                    Log.d(TAG, Integer.parseInt((timer.getText() + "").replace(":", "")) + "");
-                    int recordTime = Integer.parseInt((timer.getText() + "").replace(":", ""));
+                if (mIsRecording) {
+                    Log.d(TAG, Integer.parseInt((mTimer.getText() + "").replace(":", "")) + "");
+                    int recordTime = Integer.parseInt((mTimer.getText() + "").replace(":", ""));
                     if (recordTime >= 1) {
                         CameraUtil.playSound(MediaActionSound.STOP_VIDEO_RECORDING);
                         initRecording();
-                        MainActivity.touchEnabled = true;
+                        MainActivity.mTouchEnabled = true;
                         stopRecorder();
                     } else {
                         Toast.makeText(getContext(), "请至少录制1秒", Toast.LENGTH_SHORT).show();
@@ -179,28 +168,28 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 } else {
                     CameraUtil.playSound(MediaActionSound.START_VIDEO_RECORDING);
                     noRecording();
-                    MainActivity.touchEnabled = false;
+                    MainActivity.mTouchEnabled = false;
                 }
                 break;
             case R.id.mImageView:
                 CameraUtil.openAlbum(getContext());
                 break;
             case R.id.mChange:
-                change.setClickable(false);
+                mChange.setClickable(false);
                 changeCamera();
                 break;
             case R.id.mPhotoMode:
-                photoMode.setClickable(false);
+                mPhotoMode.setClickable(false);
                 ((MainActivity) requireActivity()).photoMode();
                 break;
             case R.id.videoQuality:
-                if (videoQuality.getText().equals(getString(R.string.quality480))) {
-                    quality = getString(R.string.quality720);
+                if (mVideoQuality.getText().equals(getString(R.string.quality480))) {
+                    mQuality = getString(R.string.quality720);
                 } else {
-                    quality = getString(R.string.quality480);
+                    mQuality = getString(R.string.quality480);
                 }
-                videoQuality.setText(quality);
-                mask.setVisibility(View.VISIBLE);
+                mVideoQuality.setText(mQuality);
+                mMask.setVisibility(View.VISIBLE);
                 closeCamera();
                 setUpCamera();
                 openCamera();
@@ -209,26 +198,24 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     }
 
     private void initRecording(){
-        recording.setImageResource(R.drawable.recording);
-        isRecording = false;
-        photoMode.setVisibility(View.VISIBLE);
-        recordingMode.setVisibility(View.VISIBLE);
-        videoQuality.setVisibility(View.VISIBLE);
+        mRecording.setImageResource(R.drawable.recording);
+        mIsRecording = false;
+        mPhotoMode.setVisibility(View.VISIBLE);
+        mRecordingMode.setVisibility(View.VISIBLE);
+        mVideoQuality.setVisibility(View.VISIBLE);
         mImageView.setVisibility(View.VISIBLE);
-        change.setVisibility(View.VISIBLE);
-//        MainActivity.touchEnabled = true;
+        mChange.setVisibility(View.VISIBLE);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void noRecording() {
-//        MainActivity.touchEnabled = false;
-        photoMode.setVisibility(View.GONE);
-        recordingMode.setVisibility(View.GONE);
-        videoQuality.setVisibility(View.GONE);
+        mPhotoMode.setVisibility(View.GONE);
+        mRecordingMode.setVisibility(View.GONE);
+        mVideoQuality.setVisibility(View.GONE);
         mImageView.setVisibility(View.GONE);
-        change.setVisibility(View.GONE);
-        isRecording = true;
-        recording.setImageResource(R.drawable.stop_recording);
+        mChange.setVisibility(View.GONE);
+        mIsRecording = true;
+        mRecording.setImageResource(R.drawable.stop_recording);
         configSession();
         startRecorder();
     }
@@ -255,7 +242,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         @Override
         public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
             Log.d(TAG, "onSurfaceTextureAvailable");
-
             setUpCamera();
             openCamera();
         }
@@ -263,27 +249,25 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         @Override
         public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
             Log.d(TAG, "onSurfaceTextureSizeChanged");
-            Matrix matrix = CameraUtil.configureTransform(requireActivity(), textureView.getWidth(), textureView.getHeight(), mPreviewSize);
-            textureView.setTransform(matrix);
-
+            Matrix matrix = CameraUtil.configureTransform(requireActivity(), mTextureView.getWidth(), mTextureView.getHeight(), mPreviewSize);
+            mTextureView.setTransform(matrix);
             OrientationEventListener orientationEventListener = new OrientationEventListener(getContext()) {
                 @Override
                 public void onOrientationChanged(int orientation) {
-//                    Log.d(TAG, "onOrientationChanged");
                     if (orientation == OrientationEventListener.ORIENTATION_UNKNOWN) {
                         return;
                     }
-                    int tempRotation = rotation;
+                    int tempRotation = mRotation;
                     if (orientation > 315 || orientation < 45) {
-                        rotation = 0;
+                        mRotation = 0;
                     } else if (orientation > 225 && orientation < 315) {
-                        rotation = 1;
+                        mRotation = 1;
                     } else if (orientation > 135 && orientation < 225) {
-                        rotation = 2;
+                        mRotation = 2;
                     } else if (orientation > 45 && orientation < 135) {
-                        rotation = 3;
+                        mRotation = 3;
                     }
-                    if (rotation != tempRotation) {
+                    if (mRotation != tempRotation) {
                         rotationAnim();
                     }
                 }
@@ -304,18 +288,16 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
         @Override
         public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
-//            Log.d(TAG, "onSurfaceTextureUpdated");
         }
     };
 
     private void setUpCamera() {
         Log.d(TAG, "setupCamera");
-
         mCameraManager = (CameraManager) requireActivity().getSystemService(Context.CAMERA_SERVICE);
         try {
             for (String cameraId : mCameraManager.getCameraIdList()) {
                 CameraCharacteristics characteristics = mCameraManager.getCameraCharacteristics(cameraId);
-                if (back) {
+                if (mBack) {
                     if (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
                         continue;
                     }
@@ -326,9 +308,9 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 }
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
-                mPreviewSize = getMatchingSize(sizes, quality);
-                textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
-                mask.setLayoutParams(textureView.getLayoutParams());
+                mPreviewSize = getMatchingSize(sizes, mQuality);
+                mTextureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
+                mMask.setLayoutParams(mTextureView.getLayoutParams());
                 mCameraId = cameraId;
                 break;
             }
@@ -339,7 +321,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
     private void openCamera() {
         Log.d(TAG, "openCamera");
-
         initChildHandler();
         try {
             if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -347,12 +328,12 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             } else {
                 int rotation = requireActivity().getWindowManager().getDefaultDisplay().getOrientation();
                 if (rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180) {
-                    textureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
+                    mTextureView.setAspectRation(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 } else {
-                    textureView.setAspectRation(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+                    mTextureView.setAspectRation(mPreviewSize.getWidth(), mPreviewSize.getHeight());
                 }
-                Matrix matrix = CameraUtil.configureTransform(requireActivity(), textureView.getWidth(), textureView.getHeight(), mPreviewSize);
-                textureView.setTransform(matrix);
+                Matrix matrix = CameraUtil.configureTransform(requireActivity(), mTextureView.getWidth(), mTextureView.getHeight(), mPreviewSize);
+                mTextureView.setTransform(matrix);
                 mCameraManager.openCamera(mCameraId, stateCallback, null);
             }
         } catch (CameraAccessException e) {
@@ -377,7 +358,6 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
             Log.d(TAG, "CameraDevice.StateCallback： onOpened");
-
             mCameraDevice = camera;
             startPreview();
         }
@@ -395,8 +375,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
     private void startPreview() {
         Log.d(TAG, "startPreview");
-
-        SurfaceTexture mSurfaceTexture = textureView.getSurfaceTexture();
+        SurfaceTexture mSurfaceTexture = mTextureView.getSurfaceTexture();
         mSurfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         Surface previewSurface = new Surface(mSurfaceTexture);
         try {
@@ -404,17 +383,17 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             mPreviewCaptureRequestBuilder.addTarget(previewSurface);
             mCameraDevice.createCaptureSession(Collections.singletonList(previewSurface), sessionStateCallback, mChildHandler);
             Thread.sleep(450);
-            mask.setVisibility(View.GONE);
-            change.setClickable(true);
+            mMask.setVisibility(View.GONE);
+            mChange.setClickable(true);
         } catch (CameraAccessException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private Size getMatchingSize(Size[] sizes, String quality) {
+    private Size getMatchingSize(Size[] sizes, String mQuality) {
         Size selectSize = null;
         for (Size itemSize: sizes) {
-            if (quality.equals(getString(R.string.quality480))) {
+            if (mQuality.equals(getString(R.string.quality480))) {
                 if ((itemSize.getWidth() == 640 && itemSize.getHeight() == 480) ||
                         (itemSize.getWidth() == 720 && itemSize.getHeight() == 480)) {
                     selectSize = itemSize;
@@ -425,10 +404,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
                 }
             }
         }
-
         Log.d(TAG, "getMatchingSize: 选择的分辨率宽度 = " + (selectSize != null ? selectSize.getHeight() : 0));
         Log.d(TAG, "getMatchingSize: 选择的分辨率高度 = " + (selectSize != null ? selectSize.getWidth() : 0));
-
         return selectSize;
     }
 
@@ -439,11 +416,9 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             mCameraCaptureSession = cameraCaptureSession;
             updatePreview();
         }
-
         @Override
         public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
             Log.e(TAG, "sessionStateCallback onConfigureFailed");
-
         }
     };
 
@@ -456,8 +431,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             HandlerThread thread = new HandlerThread("CameraPreview");
             thread.start();
             mCameraCaptureSession.setRepeatingRequest(mPreviewCaptureRequestBuilder.build(), null, mChildHandler);
-            MainActivity.touchEnabled = true;
-            photoMode.setClickable(true);
+            MainActivity.mTouchEnabled = true;
+            mPhotoMode.setClickable(true);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -472,9 +447,8 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
 
     private void changeCamera() {
         Log.d(TAG, "changeCamera");
-
-        back = !back;
-        ObjectAnimator anim = ObjectAnimator.ofFloat(change, "rotation", 0f, -180f);
+        mBack = !mBack;
+        ObjectAnimator anim = ObjectAnimator.ofFloat(mChange, "rotation", 0f, -180f);
         anim.setDuration(800);
         anim.start();
         closeCamera();
@@ -494,7 +468,7 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
             e.printStackTrace();
         }
         configMediaRecorder();
-        SurfaceTexture surfaceTexture = textureView.getSurfaceTexture();
+        SurfaceTexture surfaceTexture = mTextureView.getSurfaceTexture();
         surfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         Surface previewSurface = new Surface(surfaceTexture);
         Surface recorderSurface = mMediaRecorder.getSurface();
@@ -527,11 +501,11 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         mMediaRecorder.setVideoFrameRate(30);
         mMediaRecorder.setOutputFile(file.getAbsoluteFile());
         mMediaRecorder.setVideoEncodingBitRate(8 * 1024 * 1920);
-        mMediaRecorder.setOrientationHint(CameraUtil.BACK_ORIENTATIONS.get(rotation));
+        mMediaRecorder.setOrientationHint(CameraUtil.BACK_ORIENTATIONS.get(mRotation));
         if (mCameraId.equals("1")) {
-            mMediaRecorder.setOrientationHint(CameraUtil.FRONT_ORIENTATIONS.get(rotation));
+            mMediaRecorder.setOrientationHint(CameraUtil.FRONT_ORIENTATIONS.get(mRotation));
         }
-        Surface surface = new Surface(textureView.getSurfaceTexture());
+        Surface surface = new Surface(mTextureView.getSurfaceTexture());
         mMediaRecorder.setPreviewDisplay(surface);
         try {
             mMediaRecorder.prepare();
@@ -587,13 +561,13 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
     };
 
     private void startRecorder() {
-        CameraUtil.scaleAnim(recording, 1f, 0.8f, 1f, 300).start();
+        CameraUtil.scaleAnim(mRecording, 1f, 0.8f, 1f, 300).start();
         mMediaRecorder.start();
         startTime();
     }
 
     private void stopRecorder() {
-        CameraUtil.scaleAnim(recording, 1f, 0.8f, 1f, 300).start();
+        CameraUtil.scaleAnim(mRecording, 1f, 0.8f, 1f, 300).start();
         if (mMediaRecorder != null) {
             mMediaRecorder.stop();
             mMediaRecorder.reset();
@@ -601,41 +575,41 @@ public class RecorderVideoFragment extends Fragment implements View.OnClickListe
         }
         endTime();
         CameraUtil.broadcast(requireActivity());
-        if (!pause) {
+        if (!mPause) {
             startPreview();
         }
     }
 
     private void startTime() {
-        timerBg.setVisibility(View.VISIBLE);
-        timer.setBase(SystemClock.elapsedRealtime());
-        timer.start();
+        mTimerBg.setVisibility(View.VISIBLE);
+        mTimer.setBase(SystemClock.elapsedRealtime());
+        mTimer.start();
     }
 
     private void endTime() {
-        timer.stop();
-        timerBg.setVisibility(View.GONE);
-        timer.setBase(SystemClock.elapsedRealtime());
+        mTimer.stop();
+        mTimerBg.setVisibility(View.GONE);
+        mTimer.setBase(SystemClock.elapsedRealtime());
     }
 
     private void rotationAnim() {
         float toValue = 0;
-        if (rotation == 0) {
+        if (mRotation == 0) {
             toValue = 0;
-        } else if (rotation == 1) {
+        } else if (mRotation == 1) {
             toValue = 90;
-        } else if (rotation == 2) {
+        } else if (mRotation == 2) {
             toValue = 180;
-        } else if (rotation == 3) {
+        } else if (mRotation == 3) {
             toValue = -90;
         }
-        ObjectAnimator changeAnim = ObjectAnimator.ofFloat(change, "rotation", 0f, toValue);
+        ObjectAnimator changeAnim = ObjectAnimator.ofFloat(mChange, "rotation", 0f, toValue);
         ObjectAnimator previewAnim = ObjectAnimator.ofFloat(mImageView, "rotation", 0f, toValue);
-        ObjectAnimator buttonAnim = ObjectAnimator.ofFloat(recording, "rotation", 0f, toValue);
-        ObjectAnimator ratioAnim = ObjectAnimator.ofFloat(videoQuality, "rotation", 0f, toValue);
-        ObjectAnimator photoAnim = ObjectAnimator.ofFloat(photoMode, "rotation", 0f, toValue);
-        ObjectAnimator videoAnim = ObjectAnimator.ofFloat(recordingMode, "rotation", 0f, toValue);
-        ObjectAnimator timerAnim = ObjectAnimator.ofFloat(timerBg, "rotation", 0f, toValue);
+        ObjectAnimator buttonAnim = ObjectAnimator.ofFloat(mRecording, "rotation", 0f, toValue);
+        ObjectAnimator ratioAnim = ObjectAnimator.ofFloat(mVideoQuality, "rotation", 0f, toValue);
+        ObjectAnimator photoAnim = ObjectAnimator.ofFloat(mPhotoMode, "rotation", 0f, toValue);
+        ObjectAnimator videoAnim = ObjectAnimator.ofFloat(mRecordingMode, "rotation", 0f, toValue);
+        ObjectAnimator timerAnim = ObjectAnimator.ofFloat(mTimerBg, "rotation", 0f, toValue);
         AnimatorSet set = new AnimatorSet();
         set.play(changeAnim).with(previewAnim).with(buttonAnim).with(ratioAnim).with(photoAnim)
                 .with(videoAnim).with(timerAnim);
