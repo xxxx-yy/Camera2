@@ -179,12 +179,12 @@ public class CameraUtil {
                     e.printStackTrace();
                 }
                 if (size > 0) {
-                    String fileName = f.toString();
-                    String tmp = Environment.getExternalStorageDirectory().toString() + "/DCIM/Camera";
-                    if (fileName.charAt(tmp.length() + 1) == '.') {
+                    String fileName = f.getName();
+                    //过滤删除至回收站中的照片视频
+                    if (fileName.startsWith(".")) {
                         continue;
                     }
-                    imageList.add(fileName);
+                    imageList.add(f.toString());
                     Log.i("File", "File name = " + fileName);
                 } else {
                     if (f.delete()) {
