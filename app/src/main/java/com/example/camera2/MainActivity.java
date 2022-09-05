@@ -15,7 +15,7 @@ import com.example.camera2.mode.TakePictureFragment;
 import com.example.camera2.util.CameraUtil;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String TAG = "MainActivity";
+    private final String TAG = "MainActivity";
     private float mDownX = 0;
     private float mDownY = 0;
     private int mCurrentMode = 0;    //0: photoMode, 1: videoMode

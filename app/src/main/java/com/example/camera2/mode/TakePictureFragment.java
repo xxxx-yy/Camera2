@@ -63,7 +63,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentResultListener;
 
 import com.example.camera2.util.CameraUtil;
-import com.example.camera2.FaceDetectListener;
+import com.example.camera2.listener.FaceDetectListener;
 import com.example.camera2.MainActivity;
 import com.example.camera2.R;
 import com.example.camera2.view.AutoFitTextureView;
@@ -315,7 +315,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
             case R.id.imageView:
                 CameraUtil.openAlbum(getContext());
                 break;
-            case R.id.mRecordingMode:
+            case R.id.recordingMode:
                 ((MainActivity) requireActivity()).videoMode();
                 break;
             case R.id.ratio_1_1:
@@ -738,7 +738,7 @@ public class TakePictureFragment extends Fragment implements View.OnClickListene
                         getResources().getDimensionPixelOffset(R.dimen.thumbnailWidth),
                         getResources().getDimensionPixelOffset(R.dimen.thumbnailHeight));
                 Bitmap thumbnailBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, thumbnailDecOption);
-                if (mMirrorFlag) {
+                if (mCameraId.equals(FRONT_CAMERA_ID) && mMirrorFlag) {
                     Matrix m = new Matrix();
                     m.postScale(-1, 1);
                     thumbnailBitmap = Bitmap.createBitmap(thumbnailBitmap, 0, 0, thumbnailBitmap.getWidth(), thumbnailBitmap.getHeight(), m, true);
